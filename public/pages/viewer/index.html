@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="icon" type="image/x-icon" href="https://cdn.autodesk.io/favicon.ico">
+        <link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/style.css">
+        <link rel="stylesheet" href="https://unpkg.com/inspire-tree-dom@4.0.6/dist/inspire-tree-light.min.css">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+        <link rel="stylesheet" href="../../main.css">
+        <title>Hemy X - Autodesk Construction Cloud Issue Reporting</title>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+            rel="stylesheet">
+    </head>
+
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+    <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.js"></script>
+    <link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/style.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+
+    <!-- sidebar -->
+    <script src="https://unpkg.com/inspire-tree@4.3.1/dist/inspire-tree.js"></script>
+    <script src="https://unpkg.com/inspire-tree-dom@4.0.6/dist/inspire-tree-dom.min.js"></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.9.0/dist/js/bootstrap-datepicker.min.js"></script>
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.9.0/dist/css/bootstrap-datepicker.min.css">
+    <!-- jstree packages -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.2.1/themes/default/style.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.6/jstree.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/ui/1.14.1/jquery-ui.js"></script>
+
+    <script src="https://kit.fontawesome.com/0977ffc42e.js" crossorigin="anonymous"></script>
+    <script src="./viewer.js" type="module"></script>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .sidebar {
+            width: 120px;
+            height: 60px;
+            background-color: #ffffff;
+            border-right: 1px solid rgb(129, 127, 127);
+            left: 20px;
+            top: 20px;
+            position: absolute;
+            z-index: 9999;
+            display: flex;
+            border-radius: 8px;
+            box-shadow: 3px 3px 8px 3px #6c757d;
+
+
+        }
+
+        .sidebar .icon {
+            color: rgb(112, 112, 112);
+            text-align: center;
+            padding: 15px;
+            cursor: pointer;
+        }
+
+        .sidebar .icon:hover {
+            background-color: #495057;
+        }
+
+        .sidebar .icon.active {
+            background-color: #007bff;
+            color: white;
+        }
+
+        #div-sidebar .sub-sidebar {
+            background-color: #ffffff;
+            height: calc(100vh - 150px);
+            display: none;
+            top: 90px;
+            z-index: 1000;
+            border-right: 1px solid rgb(128, 128, 128);
+            left: 20px;
+            position: absolute;
+            box-shadow: 3px 3px 8px 3px #6c757d;
+            border-radius: 8px;
+
+        }
+
+        #div-sidebar .sub-sidebar.open {
+            display: block;
+            flex: 0 0 360px;
+            padding: 0;
+            width: 360px;
+            transition: width 0.7s ease;
+        }
+
+        .sub-sidebar .sub-icon {
+            color: rgb(66, 66, 66);
+            padding: 5px;
+            margin-left: 10px;
+            cursor: pointer;
+            display: block;
+            border-bottom: 1px solid rgb(170, 170, 170);
+        }
+
+        .sub-sidebar .sub-icon.active {
+            background-color: #6c757d;
+            color: #ffffff;
+        }
+
+        .sub-sidebar .sub-icon-2 {
+            color: rgb(66, 66, 66);
+            padding: 5px;
+            cursor: pointer;
+            display: flex;
+        }
+
+        .item-container {
+            display: inline-flex;
+        }
+
+        .grid-container {
+            display: flex;
+            padding: 0px;
+            width: 100%;
+            height: 100vh;
+
+        }
+
+        .sub-sidebar .sub-icon:hover,
+        .sub-icon-2:hover {
+            background-color: #6c757d;
+        }
+
+
+        .sidebar-issue-reporting-form {
+            background-color: #ffffff;
+            height: 100vh;
+            display: block;
+            position: absolute;
+            top: 0px;
+            z-index: 1000;
+            border-right: 1px solid rgb(128, 128, 128);
+            width: 0px;
+        }
+
+        .sidebar-issue-reporting-form.open {
+            width: 360px;
+            padding: 0;
+            display: block;
+        }
+
+        .sidebar-issue-reporting-form .item {
+            color: rgb(66, 66, 66);
+            padding: 5px;
+            margin: 1em;
+            margin-bottom: 5px;
+            cursor: pointer;
+            display: flex;
+            border-bottom: 0px solid rgb(170, 170, 170);
+        }
+
+
+        label {
+            font-family: 'Poppins';
+            font-weight: 400;
+            font-size: 10pt;
+            color: #6c757d;
+        }
+
+        form {
+            font-family: 'Poppins';
+            font-weight: 300;
+            font-size: 9pt;
+            color: #0d0d0e;
+        }
+
+
+        .add-issue-notification {
+            position: absolute;
+            top: 60px;
+            left: 200px;
+            width: calc(100% - 400px);
+            background-color: #ffffff;
+            box-shadow: 2px 2px 6px 2px #6c757d;
+            z-index: 9999;
+        }
+
+        #issues-sidebar-items {
+            height: calc(100% - 100px);
+            overflow-y: scroll;
+        }
+    </style>
+
+
+    <body>
+        <div id="header">
+            <img class="logo" src="https://cdn.autodesk.io/logo/black/stacked.png" alt="Autodesk Platform Services">
+            <span class="title">
+                <h3>Issues Reporting</h3>
+            </span>
+            <button id="login" style="visibility: hidden;">Login</button>
+        </div>
+        <div class="spinner-overlay" id="div-loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+        <div class="grid-container p-0">
+
+            <div class="sidebar p-0" title="Models" id="div-main-sidebar">
+                <div class="icon" data-target="models-sidebar">
+                    <svg height="24" width="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
+                        class="Icon___StyledSvg-sc-e9hqt8-0 hlpdhY" data-testid="box" aria-label="box">
+                        <path
+                            d="M3.59,6.58h0l0,0ZM20.72,7a.41.41,0,0,0-.07-.17.61.61,0,0,0-.07-.1.43.43,0,0,0-.12-.11l-.05,0,0,0h0s0,0,0,0L12.4,2.79l-.08,0a.74.74,0,0,0-.72,0L3.68,6.53s0,0,0,0h0l0,0,0,0a.49.49,0,0,0-.18.2A.71.71,0,0,0,3.28,7a.69.69,0,0,0,0,.2V17.1a.75.75,0,0,0,.45.68l7.89,3.49.11.05.14.05.16,0,.17,0,.12,0h0l.1-.05,7.9-3.49a.75.75,0,0,0,.44-.68V7.21A.69.69,0,0,0,20.72,7ZM11.25,19.48l-6.5-2.87V8.36l6.5,2.88ZM12,9.93,5.81,7.18,12,4.25l6.19,2.94Zm7.24,6.68-6.5,2.87V11.24l6.5-2.88Zm1.14-10,0,0h0Z">
+                        </path>
+                    </svg>
+                </div>
+                <div class="icon" data-target="issues-sidebar" title="Issues" id="icon-sidebar-issues">
+                    <svg height="24" width="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
+                        class="Icon___StyledSvg-sc-e9hqt8-0 hlpdhY" data-testid="checkmarkCircle"
+                        aria-label="checkmarkCircle">
+                        <path
+                            d="M9.94,15.75a.74.74,0,0,1-.53-.22l-2-2.06a.74.74,0,0,1,0-1.06.75.75,0,0,1,1.06,0l1.52,1.53L15.58,8.3a.75.75,0,0,1,1.06,0,.74.74,0,0,1,0,1.06l-6.17,6.17A.73.73,0,0,1,9.94,15.75ZM21.75,12A9.75,9.75,0,1,0,12,21.75,9.76,9.76,0,0,0,21.75,12Zm-1.5,0A8.25,8.25,0,1,1,12,3.75,8.26,8.26,0,0,1,20.25,12Z">
+                        </path>
+                    </svg>
+                </div>
+                <div class="icon d-none" data-target="sub-sidebar-3">📂</div>
+            </div>
+            <div id="div-sidebar" class="p-0">
+                <div class="sub-sidebar" id="models-sidebar">
+                    <div class="p-2 d-flex">
+                        <h4 class="fw-bolder">Models</h4>
+                    </div>
+                    <hr>
+                    <div id="models-sidebar-items">
+                    </div>
+                </div>
+                <div class="sub-sidebar" id="issues-sidebar">
+                    <div class="p-2 d-flex">
+                        <div>
+                            <h4 class="fw-bolder">Issues</h4>
+                        </div>
+                      
+                    </div>
+                    <hr>
+                    <div id="issues-sidebar-items">
+                        <div class="sub-icon d-none">
+                            <div class="d-block justify-content-between">
+                                <div class="d-flex">
+                                    <h6 class="mb-1 fw-bold">#000 - Issue Title</h6>
+                                </div>
+                                <div class="d-flex" style="height: 20px; align-items: center;">
+                                    <div style="border-radius: 5px; width: 5px; height: 20px;" class="bg-warning"></div>
+                                    <small class="ms-1">Open &middot;</small>
+                                    <a id="deviation-${issue.id}" target="_blank" href="#" title="Go to record"
+                                        style="color: #495057;" class="ms-2">
+                                        <svg class="w-[18px] h-[18px] text-gray-800 dark:text-white" aria-hidden="true"
+                                            xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                            viewBox="0 0 24 24">
+                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M3 15v3c0 .5523.44772 1 1 1h9.5M3 15v-4m0 4h9m-9-4V6c0-.55228.44772-1 1-1h16c.5523 0 1 .44772 1 1v5H3Zm5 0v8m4-8v8m7.0999-1.0999L21 16m0 0-1.9001-1.9001M21 16h-5" />
+                                        </svg>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="preview" class="p-0">
+                <div class="alert d-flex alert-dismissible fade show add-issue-notification d-none" id="add-issue-notif"
+                    role="alert">
+                    <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
+                        viewBox="0 0 24 24">
+                        <path fill-rule="evenodd"
+                            d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm9.408-5.5a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2h-.01ZM10 10a1 1 0 1 0 0 2h1v3h-1a1 1 0 1 0 0 2h4a1 1 0 1 0 0-2h-1v-4a1 1 0 0 0-1-1h-2Z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <div class="ms-3">
+                        Click an Item on the 3D Model
+                    </div>
+                    <button id="btn-cancel-issue-create" type="button" class="btn-close" aria-label="Close">
+
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+
+
+
+        <!-- <div class="d-flex">
+         Main Sidebar -->
+        <!-- <div class="main-sidebar" id="mainSidebar">
+            <div class="toggle-btn" onclick="toggleSubSidebar()">
+                <i class="fas fa-bars"></i>
+            </div>
+            <div class="icon" onclick="showContent('homeContent', 'homeSubSidebar')" title="Models">
+                <svg height="24" width="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
+                    class="Icon___StyledSvg-sc-e9hqt8-0 hlpdhY" data-testid="box" aria-label="box">
+                    <path
+                        d="M3.59,6.58h0l0,0ZM20.72,7a.41.41,0,0,0-.07-.17.61.61,0,0,0-.07-.1.43.43,0,0,0-.12-.11l-.05,0,0,0h0s0,0,0,0L12.4,2.79l-.08,0a.74.74,0,0,0-.72,0L3.68,6.53s0,0,0,0h0l0,0,0,0a.49.49,0,0,0-.18.2A.71.71,0,0,0,3.28,7a.69.69,0,0,0,0,.2V17.1a.75.75,0,0,0,.45.68l7.89,3.49.11.05.14.05.16,0,.17,0,.12,0h0l.1-.05,7.9-3.49a.75.75,0,0,0,.44-.68V7.21A.69.69,0,0,0,20.72,7ZM11.25,19.48l-6.5-2.87V8.36l6.5,2.88ZM12,9.93,5.81,7.18,12,4.25l6.19,2.94Zm7.24,6.68-6.5,2.87V11.24l6.5-2.88Zm1.14-10,0,0h0Z">
+                    </path>
+                </svg>
+            </div>
+            <div class="icon" onclick="showContent('profileContent', 'profileSubSidebar')" title="Levels">
+                <svg height="24" width="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
+                    class="Icon___StyledSvg-sc-e9hqt8-0 hlpdhY" data-testid="levels" aria-label="levels">
+                    <path
+                        d="M12,2.25A9.75,9.75,0,1,0,21.749,12,9.763,9.763,0,0,0,12,2.25Zm-.75,1.53v7.47H3.779A8.279,8.279,0,0,1,11.249,3.78Zm1.5,16.44V12.75h7.47A8.279,8.279,0,0,1,12.749,20.22Z">
+                    </path>
+                </svg>
+
+            </div>
+            <div class="icon" onclick="showContent('settingsContent', 'settingsSubSidebar')" title="Model Browser">
+                <svg height="24" width="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
+                    class="Icon___StyledSvg-sc-e9hqt8-0 hlpdhY" data-testid="modelBrowser">
+                    <path
+                        d="M12.966,19.126l-1.647.951V11.924l6.619-3.252v2.017a4.986,4.986,0,0,1,1.5.724v-4.1a.751.751,0,0,0-.375-.65L10.944,1.974a.755.755,0,0,0-.75,0L2.074,6.662c-.016.01-.023.028-.039.039a.738.738,0,0,0-.189.189.656.656,0,0,0-.054.073c-.006.011-.017.019-.022.031A.724.724,0,0,0,1.7,7.3l0,.012v9.376a.749.749,0,0,0,.375.649l8.12,4.688a.747.747,0,0,0,.75,0l3.389-1.957A5.064,5.064,0,0,1,12.966,19.126Zm-3.147.951L3.2,16.255V8.492l6.62,3.1Zm1.088-9.622c-.007,0-.012-.01-.02-.014l-6.819-3.2,6.5-3.753,6.673,3.853ZM22.524,20.646l-2.688-2.689a4.22,4.22,0,0,0,.822-2.493,4.266,4.266,0,1,0-1.9,3.54l2.7,2.7a.75.75,0,1,0,1.06-1.06Zm-8.883-5.182A2.759,2.759,0,1,1,16.4,18.222,2.763,2.763,0,0,1,13.641,15.464Z">
+                    </path>
+                </svg>
+            </div>
+            <div class="icon" onclick="showContent('logoutContent', 'logoutSubSidebar')" title="Issues">
+                <svg height="24" width="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
+                    class="Icon___StyledSvg-sc-e9hqt8-0 hlpdhY" data-testid="checkmarkCircle"
+                    aria-label="checkmarkCircle">
+                    <path
+                        d="M9.94,15.75a.74.74,0,0,1-.53-.22l-2-2.06a.74.74,0,0,1,0-1.06.75.75,0,0,1,1.06,0l1.52,1.53L15.58,8.3a.75.75,0,0,1,1.06,0,.74.74,0,0,1,0,1.06l-6.17,6.17A.73.73,0,0,1,9.94,15.75ZM21.75,12A9.75,9.75,0,1,0,12,21.75,9.76,9.76,0,0,0,21.75,12Zm-1.5,0A8.25,8.25,0,1,1,12,3.75,8.26,8.26,0,0,1,20.25,12Z">
+                    </path>
+                </svg>
+            </div>
+        </div> -->
+
+        <!-- Sub Sidebars -->
+
+
+
+        <!-- Main Content Area -->
+
+
+
+        <!-- Bootstrap JS -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js">
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+        <script>
+
+
+        </script>
+
+
+
+
+    </body>
+
+</html>

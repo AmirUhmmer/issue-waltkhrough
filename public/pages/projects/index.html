@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="icon" type="image/x-icon" href="https://cdn.autodesk.io/favicon.ico">
+        <link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/style.css">
+        <link rel="stylesheet" href="https://unpkg.com/inspire-tree-dom@4.0.6/dist/inspire-tree-light.min.css">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+        <link rel="stylesheet" href="../../main.css">
+        <title>Hemy X - Autodesk Construction Cloud Issue Reporting</title>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+            rel="stylesheet">
+    </head>
+
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+    <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.js"></script>
+    <link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/style.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+
+    <!-- sidebar -->
+    <script src="https://unpkg.com/inspire-tree@4.3.1/dist/inspire-tree.js"></script>
+    <script src="https://unpkg.com/inspire-tree-dom@4.0.6/dist/inspire-tree-dom.min.js"></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.9.0/dist/js/bootstrap-datepicker.min.js"></script>
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.9.0/dist/css/bootstrap-datepicker.min.css">
+    <!-- jstree packages -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.2.1/themes/default/style.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.6/jstree.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/ui/1.14.1/jquery-ui.js"></script>
+
+    <script src="https://kit.fontawesome.com/0977ffc42e.js" crossorigin="anonymous"></script>
+    <script src="./project.js" type="module"></script>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+    
+  
+    </style>
+
+
+    <body>
+        <div id="header">
+            <img class="logo" src="https://cdn.autodesk.io/logo/black/stacked.png" alt="Autodesk Platform Services">
+            <span class="title">
+                <h3>Issues Reporting</h3>
+            </span>
+            <button id="login" style="visibility: hidden;">Login</button>
+        </div>
+        <div class="spinner-overlay" id="div-loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+
+        <div id="preview" class="p-0">
+        </div>
+
+
+
+        <!-- <div class="d-flex">
+         Main Sidebar -->
+        <!-- <div class="main-sidebar" id="mainSidebar">
+            <div class="toggle-btn" onclick="toggleSubSidebar()">
+                <i class="fas fa-bars"></i>
+            </div>
+            <div class="icon" onclick="showContent('homeContent', 'homeSubSidebar')" title="Models">
+                <svg height="24" width="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
+                    class="Icon___StyledSvg-sc-e9hqt8-0 hlpdhY" data-testid="box" aria-label="box">
+                    <path
+                        d="M3.59,6.58h0l0,0ZM20.72,7a.41.41,0,0,0-.07-.17.61.61,0,0,0-.07-.1.43.43,0,0,0-.12-.11l-.05,0,0,0h0s0,0,0,0L12.4,2.79l-.08,0a.74.74,0,0,0-.72,0L3.68,6.53s0,0,0,0h0l0,0,0,0a.49.49,0,0,0-.18.2A.71.71,0,0,0,3.28,7a.69.69,0,0,0,0,.2V17.1a.75.75,0,0,0,.45.68l7.89,3.49.11.05.14.05.16,0,.17,0,.12,0h0l.1-.05,7.9-3.49a.75.75,0,0,0,.44-.68V7.21A.69.69,0,0,0,20.72,7ZM11.25,19.48l-6.5-2.87V8.36l6.5,2.88ZM12,9.93,5.81,7.18,12,4.25l6.19,2.94Zm7.24,6.68-6.5,2.87V11.24l6.5-2.88Zm1.14-10,0,0h0Z">
+                    </path>
+                </svg>
+            </div>
+            <div class="icon" onclick="showContent('profileContent', 'profileSubSidebar')" title="Levels">
+                <svg height="24" width="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
+                    class="Icon___StyledSvg-sc-e9hqt8-0 hlpdhY" data-testid="levels" aria-label="levels">
+                    <path
+                        d="M12,2.25A9.75,9.75,0,1,0,21.749,12,9.763,9.763,0,0,0,12,2.25Zm-.75,1.53v7.47H3.779A8.279,8.279,0,0,1,11.249,3.78Zm1.5,16.44V12.75h7.47A8.279,8.279,0,0,1,12.749,20.22Z">
+                    </path>
+                </svg>
+
+            </div>
+            <div class="icon" onclick="showContent('settingsContent', 'settingsSubSidebar')" title="Model Browser">
+                <svg height="24" width="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
+                    class="Icon___StyledSvg-sc-e9hqt8-0 hlpdhY" data-testid="modelBrowser">
+                    <path
+                        d="M12.966,19.126l-1.647.951V11.924l6.619-3.252v2.017a4.986,4.986,0,0,1,1.5.724v-4.1a.751.751,0,0,0-.375-.65L10.944,1.974a.755.755,0,0,0-.75,0L2.074,6.662c-.016.01-.023.028-.039.039a.738.738,0,0,0-.189.189.656.656,0,0,0-.054.073c-.006.011-.017.019-.022.031A.724.724,0,0,0,1.7,7.3l0,.012v9.376a.749.749,0,0,0,.375.649l8.12,4.688a.747.747,0,0,0,.75,0l3.389-1.957A5.064,5.064,0,0,1,12.966,19.126Zm-3.147.951L3.2,16.255V8.492l6.62,3.1Zm1.088-9.622c-.007,0-.012-.01-.02-.014l-6.819-3.2,6.5-3.753,6.673,3.853ZM22.524,20.646l-2.688-2.689a4.22,4.22,0,0,0,.822-2.493,4.266,4.266,0,1,0-1.9,3.54l2.7,2.7a.75.75,0,1,0,1.06-1.06Zm-8.883-5.182A2.759,2.759,0,1,1,16.4,18.222,2.763,2.763,0,0,1,13.641,15.464Z">
+                    </path>
+                </svg>
+            </div>
+            <div class="icon" onclick="showContent('logoutContent', 'logoutSubSidebar')" title="Issues">
+                <svg height="24" width="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
+                    class="Icon___StyledSvg-sc-e9hqt8-0 hlpdhY" data-testid="checkmarkCircle"
+                    aria-label="checkmarkCircle">
+                    <path
+                        d="M9.94,15.75a.74.74,0,0,1-.53-.22l-2-2.06a.74.74,0,0,1,0-1.06.75.75,0,0,1,1.06,0l1.52,1.53L15.58,8.3a.75.75,0,0,1,1.06,0,.74.74,0,0,1,0,1.06l-6.17,6.17A.73.73,0,0,1,9.94,15.75ZM21.75,12A9.75,9.75,0,1,0,12,21.75,9.76,9.76,0,0,0,21.75,12Zm-1.5,0A8.25,8.25,0,1,1,12,3.75,8.26,8.26,0,0,1,20.25,12Z">
+                    </path>
+                </svg>
+            </div>
+        </div> -->
+
+        <!-- Sub Sidebars -->
+
+
+
+        <!-- Main Content Area -->
+
+
+
+        <!-- Bootstrap JS -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js">
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+        <script>
+
+
+        </script>
+
+
+
+
+    </body>
+
+</html>

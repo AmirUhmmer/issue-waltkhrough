@@ -1,0 +1,146 @@
+body,
+html {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    font-family: ArtifaktElement;
+}
+
+#header {
+    height: 5em;
+    width: 100%;
+    display: none;
+    flex-flow: row nowrap;
+    justify-content: space-between;
+    border-bottom: 1px solid #bdbdbd;
+}
+
+#header>* {
+    height: 2em;
+    margin: 1em 1em;
+}
+
+#login {
+    font-family: ArtifaktElement;
+    font-size: 1em;
+}
+
+#header .title {
+    height: auto;
+    margin-right: auto;
+}
+
+
+.withBoard {
+    border: 1px solid silver;
+    height: 70vh;
+    border-radius: 3px;
+    margin: 2%
+}
+
+.icon-hub:before {
+    background-image: url(https://raw.githubusercontent.com/primer/octicons/main/icons/apps-16.svg);
+    /* or https://raw.githubusercontent.com/primer/octicons/main/icons/stack-16.svg */
+    background-size: cover;
+}
+
+.icon-project:before {
+
+    background-image: url(https://raw.githubusercontent.com/primer/octicons/main/icons/project-16.svg);
+    /* or https://raw.githubusercontent.com/primer/octicons/main/icons/organization-16.svg */
+    background-size: cover;
+}
+
+.icon-my-folder:before {
+    background-image: url(https://raw.githubusercontent.com/primer/octicons/main/icons/file-directory-16.svg);
+    background-size: cover;
+}
+
+.icon-item:before {
+    background-image: url(https://raw.githubusercontent.com/primer/octicons/main/icons/file-16.svg);
+    background-size: cover;
+}
+
+.icon-version:before {
+    background-image: url(https://raw.githubusercontent.com/primer/octicons/main/icons/clock-16.svg);
+    background-size: cover;
+}
+
+
+
+#issue-list {
+    height: 70vh;
+    overflow-y: scroll;
+}
+
+.pushpin-billboard-marker {
+    opacity: 1 !important;
+}
+
+.pushpin-billboard-marker.selected {
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEsAAABMCAYAAAAlS0pSAAAA4UlEQVR42u3bSw7DIAwFwNz/zhXddNVuoPWHlHkHCGKUgG0p1yVyTMYrJGDFQwFbhAIGKw8KGKw8KGCLUMBg5UEdDQYrGeo4sBEUWLC0O7BgwYIFCxYsWLBgwYL1r1jRm8nGasPP3Ew2VhlY1Waqnl96ntwdKxytagjXifXzOtUTy26sr9YbMoeGaAIMywIaDm+Yc2sbKKVDcr2lKP1c6KHd0Ugb0WwxojH8M1aGBUtgwYIFCxYsgQUL1iYofkeB1Q/mcwQFqw3MzQgrHkwlOglGCJZ2B9YdwIhMgpGAJfKWJ1qioD8mrIWXAAAAAElFTkSuQmCC") !important;
+}
+
+.pushpin-billboard-marker.unselected {
+    background-color: #bdbdbd !important;
+    opacity: 0.5 !important;
+}
+
+.leaflet-text-label {
+    width: auto !important;
+    padding: 4px;
+
+}
+
+.leaflet-text-label span:hover {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.image-container {
+    width: 50px;
+    /* Set desired width */
+    height: 50px;
+    /* Set desired height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+}
+
+.image-container img {
+    width: 100%;
+    height: auto;
+    border: 1px solid rgb(170, 170, 170);
+    border-radius: 10px;
+}
+
+.thumbnail-label {
+    display: flex;
+    position: relative;
+    top: 5px;
+    margin-left: 10px;
+}
+
+.list-group-item {
+    background-color: transparent;
+}
+
+.spinner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.8);
+    z-index: 1050;
+    /* Higher than most components */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.goto-record {
+    font-size: xx-small;
+}

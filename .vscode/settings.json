@@ -1,0 +1,4 @@
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/5d3a72c4-9755-4726-b5a1-1d5106bf771b/resourceGroups/geometry/providers/Microsoft.Web/sites/geometry/subscriptions/5d3a72c4-9755-4726-b5a1-1d5106bf771b/resourceGroups/Geometry/providers/Microsoft.Web/sites/Bim360Issue-Walkthough",
+    "appService.deploySubpath": "."
+}
