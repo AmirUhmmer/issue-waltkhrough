@@ -226,44 +226,95 @@ const modelSetViews = [
   },
 ];
 
+// async function getAccessToken(callback) {
+//   try {
+//     const resp = await fetch("/api/auth/token", {
+//       method: "GET",
+//       credentials: "include",
+//     });
+//     if (!resp.ok) {
+//       throw new Error(await resp.text());
+//     }
+//     const { access_token, expires_in } = await resp.json();
+//     callback(access_token, expires_in);
+//     console.log("token");
+//   } catch (err) {
+//     alert("Could not obtain access token. See the console for more details.");
+//     console.error(err.message);
+//   }
+// }
+
+// export function initViewer(container) {
+//   return new Promise(function (resolve, reject) {
+//     Autodesk.Viewing.Initializer(
+//       {
+//         getAccessToken,
+//       },
+//       async function () {
+//         const config = {
+//           extensions: [
+//             "Autodesk.DocumentBrowser",
+//             "Autodesk.AEC.Minimap3DExtension",
+//           ],
+//         };
+//         const v = new Autodesk.Viewing.GuiViewer3D(container, config);
+//         v.start();
+//         v.setTheme("light-theme");
+//         viewer = v;
+
+//         resolve(v);
+//       }
+//     );
+//   });
+// }
+
+
+// let viewer = null;
+let tokenCache = null;
+let tokenExpiry = 0;
+
 async function getAccessToken(callback) {
+  const now = Date.now();
+  if (tokenCache && now < tokenExpiry) {
+    return callback(tokenCache, (tokenExpiry - now) / 1000);
+  }
+
   try {
     const resp = await fetch("/api/auth/token", {
       method: "GET",
       credentials: "include",
     });
-    if (!resp.ok) {
-      throw new Error(await resp.text());
-    }
+    if (!resp.ok) throw new Error(await resp.text());
+
     const { access_token, expires_in } = await resp.json();
+    tokenCache = access_token;
+    tokenExpiry = now + expires_in * 1000;
+
     callback(access_token, expires_in);
+    console.log("token fetched");
   } catch (err) {
-    alert("Could not obtain access token. See the console for more details.");
+    alert("Could not obtain access token. See console for more details.");
     console.error(err.message);
   }
 }
 
 export function initViewer(container) {
-  return new Promise(function (resolve, reject) {
-    Autodesk.Viewing.Initializer(
-      {
-        getAccessToken,
-      },
-      async function () {
-        const config = {
-          extensions: [
-            "Autodesk.DocumentBrowser",
-            "Autodesk.AEC.Minimap3DExtension",
-          ],
-        };
-        const v = new Autodesk.Viewing.GuiViewer3D(container, config);
-        v.start();
-        v.setTheme("light-theme");
-        viewer = v;
+  return new Promise((resolve, reject) => {
+    if (viewer) return resolve(viewer); // only initialize once
 
-        resolve(v);
-      }
-    );
+    Autodesk.Viewing.Initializer({ getAccessToken }, () => {
+      const config = {
+        extensions: [
+          "Autodesk.DocumentBrowser",
+          "Autodesk.AEC.Minimap3DExtension",
+        ],
+      };
+      viewer = new Autodesk.Viewing.GuiViewer3D(container, config);
+      viewer.start();
+      viewer.setTheme("light-theme");
+
+      resolve(viewer);
+    });
   });
 }
 
