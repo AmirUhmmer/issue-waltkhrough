@@ -67,7 +67,7 @@ try {
           issue_details,
           src
         );
-      } else {cv
+      } else {
         console.log("Source Window", src);
         loadModelsandCreateIssue(viewer, containerId, src);
       }

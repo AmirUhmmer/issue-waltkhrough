@@ -128,6 +128,10 @@ const modelSetViews = [
         lineageUrn: "urn:adsk.wipemea:dm.lineage:gs0PRB3eRUS6ANLK09vDYA",
         viewableName: "SOL10-SEMY-ARST-ASBUILT",
       },
+      {
+        lineageUrn: "urn:adsk.wipemea:dm.lineage:9RzMYc2xRfu3IQ8Kzf3Cpg",
+        viewableName: "SMY-SEMY-xxx-SIT-ASBUILT-SOL10-CL",
+      }
     ],
   },
   {
@@ -275,10 +279,15 @@ let tokenExpiry = 0;
 
 async function getAccessToken(callback) {
   const now = Date.now();
-  if (tokenCache && now < tokenExpiry) {
+  // if (tokenCache && now < tokenExpiry) {
+  //   return callback(tokenCache, (tokenExpiry - now) / 1000);
+  // }
+  console.log("getAccessToken called");
+  console.log("tokenExpiry", tokenExpiry);
+  if (now < tokenExpiry - 60_000) {
     return callback(tokenCache, (tokenExpiry - now) / 1000);
   }
-
+  
   try {
     const resp = await fetch("/api/auth/token", {
       method: "GET",
@@ -512,10 +521,12 @@ async function onInitialGeometryLoaded(evt) {
   pushpinExt.removeAllItems();
   pushpinExt.showAll();
 
+  // #region: initial load issues
   const filter = {
     "filter[linkedDocumentUrn]": selectedProjectItem.relationships.item.data.id,
   };
 
+  // console.log("Selected: ", selectedProject);
   const allIssues = await getAllIssues(selectedProject, filter);
 
   //console.log({ allIssues });
@@ -524,6 +535,8 @@ async function onInitialGeometryLoaded(evt) {
 
   //  await populateIssueList('#issue-list', allIssues)
   $.each(allIssues, (index, issue) => {
+    // const customAttributes = issue.customAttributes;
+    // console.log("Issue for pushpin", issue);
     //  console.log(issue);
     const pushpinDetails =
       issue.linkedDocuments.length > 0
@@ -587,6 +600,8 @@ export async function loadModelAndIssues(viewer, item, projectId) {
   // );
 }
 
+// ! load models
+// #region load models
 async function getProjectModels(containerId) {
   // function onDocumentLoadSuccess(doc) {
   //   const loadOptions = {
@@ -612,6 +627,7 @@ async function getProjectModels(containerId) {
 
   function onDocumentLoadSuccess(doc) {
     const geometry = doc.getRoot().getDefaultGeometry();
+    // geometry?.globalOffset || 
     const offset = geometry?.globalOffset || { x: 0, y: 0, z: 0 };
 
     const loadOptions = {
@@ -627,6 +643,48 @@ async function getProjectModels(containerId) {
       modelLoaded
     );
   }
+//   let offset = null;
+// let modelsLoaded = 0;
+//   async function onDocumentLoadSuccess(doc) {
+//     let viewables = doc.getRoot().getDefaultGeometry();
+
+//     let loadOptions;
+//     console.log("Loaded Model Count:", modelsLoaded);
+//     if (modelsLoaded === 0) {
+//         loadOptions = {
+//             keepCurrentModels: true,
+//             applyRefPoint: true,
+//             skipHiddenFragments: true
+//         };
+//     } else {
+//         loadOptions = {
+//             keepCurrentModels: true,
+//             globalOffset: offset, // now it has the first model’s value
+//             applyRefPoint: true,
+//             skipHiddenFragments: true
+//         };
+//     }
+
+//     try {
+//         console.log("Loading model with options:", loadOptions);
+//         const model = await viewer.loadDocumentNode(doc, viewables, loadOptions);
+
+//         // save offset from the *first* model
+//         if (modelsLoaded === 0) {
+//             offset = model.getData().globalOffset || { x: 0, y: 0, z: 0 };
+//             console.log("Saved offset from first model:", offset);
+//         }
+//         modelsLoaded++;
+//           viewer.addEventListener(
+//             Autodesk.Viewing.GEOMETRY_LOADED_EVENT,
+//             modelLoaded
+//           );
+
+//     } catch (error) {
+//         console.error("Error loading model into viewer:", error);
+//         alert("Error loading model into viewer. See console for details.");
+//     }
+// }
 
 
   function onDocumentLoadFailure(code, message) {
@@ -742,6 +800,8 @@ async function modelLoaded(evt) {
     }
   }
 }
+
+// #endregion
 
 export async function loadModelsandCreateIssue(viewer, projectId, srcParam) {
   selectedProject = projectId;
@@ -1055,6 +1115,7 @@ async function issuesModelLoaded(evt) {
   }
 }
 
+// #region: Load Pushpins
 async function loadIssuePushpins(filter = {}) {
   pushpinExt = await viewer.loadExtension("Autodesk.BIM360.Extension.PushPin");
 
@@ -1083,6 +1144,7 @@ async function loadIssuePushpins(filter = {}) {
   // };
 
   var pushpin = [];
+  console.log("Selected Project for Pushpins", selectedProject);
   const allIssues = await getAllIssues(selectedProject);
   console.log('All Issues', allIssues)
   $.each(allIssues, (index, issue) => {
@@ -1093,20 +1155,42 @@ async function loadIssuePushpins(filter = {}) {
         : null;
 
     if (pushpinDetails && pushpinDetails.objectId) {
-      pushpin.push({
-        type: "issues",
-        id: issue.id,
-        label: `#${issue.displayId} - ${issue.title}`,
-        status: issue.status,
-        position: pushpinDetails.position,
-        objectId: pushpinDetails.objectId,
-        viewerState: pushpinDetails.viewerState,
-      });
+      // #region: bandaid solution
+      // BS19 filter
+      if (selectedProject == "1c8224f1-b860-4a2b-821b-d393c94b190d") {
+        console.log('Issue for project check', selectedProject);
+        if (issue.issueTypeId == "318b5e55-0eef-4d61-9059-927fd4d40134" || issue.issueTypeId == "318b5e55-0eef-4d61-9059-927fd4d40134") {
+          console.log('Issue for test');
+          pushpin.push({
+            type: "issues",
+            id: issue.id,
+            label: `#${issue.displayId} - ${issue.title}`,
+            status: issue.status,
+            position: pushpinDetails.position,
+            objectId: pushpinDetails.objectId,
+            viewerState: pushpinDetails.viewerState,
+          });
+        }
+      }
+      else {
+        pushpin.push({
+          type: "issues",
+          id: issue.id,
+          label: `#${issue.displayId} - ${issue.title}`,
+          status: issue.status,
+          position: pushpinDetails.position,
+          objectId: pushpinDetails.objectId,
+          viewerState: pushpinDetails.viewerState,
+        });
+      }
+
     }
   });
   pushpinExt.loadItemsV2(pushpin);
+  console.log("Pushpin Manager", pushpin);
 }
 
+// #region: Load Issues List
 async function loadIssuesList(containerId) {
   const divIssueSidebar = document.getElementById("issues-sidebar-items");
   divIssueSidebar.innerHTML = "";
@@ -1115,6 +1199,10 @@ async function loadIssuesList(containerId) {
   const issues = await getAllIssues(containerId);
   // console.log("Issues", issues);
   $.each(issues, (index, issue) => {
+    // #region: bandaid solution bs19
+    if(containerId == "1c8224f1-b860-4a2b-821b-d393c94b190d" && (issue.issueTypeId != "318b5e55-0eef-4d61-9059-927fd4d40134" || issue.issueTypeId != "318b5e55-0eef-4d61-9059-927fd4d40134")){
+      return;
+    };
     const divSubIcon = document.createElement("div");
     const customAttributes = issue.customAttributes;
     const findHemyXLink = customAttributes.filter(
@@ -1122,7 +1210,6 @@ async function loadIssuesList(containerId) {
     );
     const hemyLinkAttribute = findHemyXLink[0];
     //   console.log(hemyLinkAttribute);
-
     let innerSubIcon = "";
 
     divSubIcon.setAttribute("id", `div-issue-subicon-${issue.id}`);
@@ -1149,7 +1236,8 @@ async function loadIssuesList(containerId) {
         color: "gray",
       },
     };
-
+    // console.log("TEST:",hemyLinkAttribute);
+    // console.log("TEST:",hemyLinkAttribute.value);
     if (hemyLinkAttribute && hemyLinkAttribute.value) {
       innerSubIcon = ` <div class="d-block justify-content-between">
                             <div class="d-flex">
@@ -1353,6 +1441,7 @@ async function initIssueCreate() {
   );
 }
 
+// #region: Create Issue v2
 export async function initiateCreateIssueV2(viewer, message, userGuid) {
   const pushpin_ext = await viewer.loadExtension(
     "Autodesk.BIM360.Extension.PushPin"

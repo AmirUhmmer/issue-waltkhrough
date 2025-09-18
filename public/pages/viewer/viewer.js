@@ -151,7 +151,16 @@ try {
       //   };
       //
       //
+      // #region: view issue
     } else if (mode === "viewIssues") {
+      console.log("view issues");
+      // const url = await fetch("/api/auth/sso");
+      // if (!url.ok) {
+      //   console.log("Failed to get access token");
+      // }
+      // const url_json = await url.json();
+      //console.log(url_json);
+
       await loadModelAndIssues(viewer, {}, containerId);
 
       const projectItems = await getOneProject(containerId);
@@ -242,6 +251,8 @@ try {
       });
 
       // console.log(userGuid);
+      // ! socket listener
+      // #region socket listener
       if (userGuid) {
 
 
@@ -252,7 +263,8 @@ try {
           const socket = new WebSocket(
            `wss://autodesk-issues-reporting.azurewebsites.net/ws/${userGuid}`
           );
-
+          // ! create issue from socket
+          // #region: create issue from socket
           socket.onmessage = async (event) => {
             const message = JSON.parse(event.data);
             if (message.type === "create_issue") {
@@ -268,6 +280,9 @@ try {
               ).then((ext) => {
                 ext.selectOne(issue_id);
               });
+            }
+            else if (message.type === "refresh_issues") {
+              
             }
             else {
               console.log(message);
@@ -292,9 +307,13 @@ try {
     //#endregion
 
     const url = await fetch("/api/auth/sso");
-    const url_json = await url.json();
     // window.location.href = url_json;
     // window.location.reload();
+    if (!url.ok) {
+      console.log("Failed to get access token");
+    }
+    const url_json = await url.json();
+    console.log(url_json);
     const loginWindow = window.open(url_json, "Login", "width=600,height=600");
     //   window.location.reload();
     window.addEventListener("message", async (event) => {
