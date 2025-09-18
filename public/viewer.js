@@ -1,6 +1,6 @@
 /// import * as Autodesk from "@types/forge-viewer";
 //import { getIssues } from "../routes/services/issues";
-import { createIssue_v2, getAllIssues } from "./issues.js";
+import { createIssue_v2, getAllIssues, getIssuesFiltered } from "./issues.js";
 import { getMetadata } from "./modelderivative.js";
 import { getOneProject } from "./sidebar.js";
 var viewer = null;
@@ -128,10 +128,10 @@ const modelSetViews = [
         lineageUrn: "urn:adsk.wipemea:dm.lineage:gs0PRB3eRUS6ANLK09vDYA",
         viewableName: "SOL10-SEMY-ARST-ASBUILT",
       },
-      {
-        lineageUrn: "urn:adsk.wipemea:dm.lineage:9RzMYc2xRfu3IQ8Kzf3Cpg",
-        viewableName: "SMY-SEMY-xxx-SIT-ASBUILT-SOL10-CL",
-      }
+      // {
+      //   lineageUrn: "urn:adsk.wipemea:dm.lineage:9RzMYc2xRfu3IQ8Kzf3Cpg",
+      //   viewableName: "SMY-SEMY-xxx-SIT-ASBUILT-SOL10-CL",
+      // }
     ],
   },
   {
@@ -643,48 +643,48 @@ async function getProjectModels(containerId) {
       modelLoaded
     );
   }
-//   let offset = null;
-// let modelsLoaded = 0;
-//   async function onDocumentLoadSuccess(doc) {
-//     let viewables = doc.getRoot().getDefaultGeometry();
+  // let offset = null;
+  // let modelsLoaded = 0;
+  // async function onDocumentLoadSuccess(doc) {
+  //     let viewables = doc.getRoot().getDefaultGeometry();
 
-//     let loadOptions;
-//     console.log("Loaded Model Count:", modelsLoaded);
-//     if (modelsLoaded === 0) {
-//         loadOptions = {
-//             keepCurrentModels: true,
-//             applyRefPoint: true,
-//             skipHiddenFragments: true
-//         };
-//     } else {
-//         loadOptions = {
-//             keepCurrentModels: true,
-//             globalOffset: offset, // now it has the first model’s value
-//             applyRefPoint: true,
-//             skipHiddenFragments: true
-//         };
-//     }
+  //     let loadOptions;
+  //     console.log("Loaded Model Count:", modelsLoaded);
+  //     if (modelsLoaded === 0) {
+  //         loadOptions = {
+  //             keepCurrentModels: true,
+  //             applyRefPoint: true,
+  //             skipHiddenFragments: true
+  //         };
+  //     } else {
+  //         loadOptions = {
+  //             keepCurrentModels: true,
+  //             globalOffset: offset, // now it has the first model’s value
+  //             applyRefPoint: true,
+  //             skipHiddenFragments: true
+  //         };
+  //     }
 
-//     try {
-//         console.log("Loading model with options:", loadOptions);
-//         const model = await viewer.loadDocumentNode(doc, viewables, loadOptions);
+  //     try {
+  //         console.log("Loading model with options:", loadOptions);
+  //         const model = await viewer.loadDocumentNode(doc, viewables, loadOptions);
 
-//         // save offset from the *first* model
-//         if (modelsLoaded === 0) {
-//             offset = model.getData().globalOffset || { x: 0, y: 0, z: 0 };
-//             console.log("Saved offset from first model:", offset);
-//         }
-//         modelsLoaded++;
-//           viewer.addEventListener(
-//             Autodesk.Viewing.GEOMETRY_LOADED_EVENT,
-//             modelLoaded
-//           );
+  //         // save offset from the *first* model
+  //         if (modelsLoaded === 0) {
+  //             offset = model.getData().globalOffset || { x: 0, y: 0, z: 0 };
+  //             console.log("Saved offset from first model:", offset);
+  //         }
+  //         modelsLoaded++;
+  //           viewer.addEventListener(
+  //             Autodesk.Viewing.GEOMETRY_LOADED_EVENT,
+  //             modelLoaded
+  //           );
 
-//     } catch (error) {
-//         console.error("Error loading model into viewer:", error);
-//         alert("Error loading model into viewer. See console for details.");
-//     }
-// }
+  //     } catch (error) {
+  //         console.error("Error loading model into viewer:", error);
+  //         alert("Error loading model into viewer. See console for details.");
+  //     }
+  // }
 
 
   function onDocumentLoadFailure(code, message) {
@@ -1190,6 +1190,178 @@ async function loadIssuePushpins(filter = {}) {
   console.log("Pushpin Manager", pushpin);
 }
 
+
+
+// ! pushpin filtered
+// #region: pushpin filtered
+export async function loadIssuePushpinsFiltered(issueStatus, issueSubtype) {
+  console.log('Filter Issues Called');
+  pushpinExt = await viewer.loadExtension("Autodesk.BIM360.Extension.PushPin");
+  pushpinExt.pushPinManager.addEventListener(
+    "pushpin.selected",
+    async function (e) {
+      //  console.log(e);
+      const pushPinItem = e.value;
+      const pushPinList = e.target.pushPinList;
+      pushPinList.forEach((pushpin) => {
+        const unselectedPusPinsDiv = document.getElementById(
+          pushpin.itemData.id
+        );
+        if (!unselectedPusPinsDiv.classList.contains("selected")) {
+          unselectedPusPinsDiv.classList.add("unselected");
+        } else {
+          unselectedPusPinsDiv.classList.remove("unselected");
+        }
+      });
+    }
+  );
+  pushpinExt.removeAllItems();
+  pushpinExt.showAll();
+  // const filter = {
+  //   "filter[linkedDocumentUrn]": selectedProjectItem.relationships.item.data.id,
+  // };
+
+  var pushpin = [];
+  console.log("Selected Project for Pushpins", selectedProject);
+  const filter = {};
+  if (issueStatus) filter.status = issueStatus;
+  if (issueSubtype) filter.issueSubtypeId = issueSubtype;
+  
+  const allIssues = await getIssuesFiltered(selectedProject, filter);
+  console.log('All Issues', allIssues)
+  $.each(allIssues, (index, issue) => {
+    //  console.log(issue);
+    const pushpinDetails =
+      issue.linkedDocuments.length > 0
+        ? issue.linkedDocuments[0].details
+        : null;
+
+    if (pushpinDetails && pushpinDetails.position) {
+      pushpin.push({
+        type: "issues",
+        id: issue.id,
+        label: `#${issue.displayId} - ${issue.title}`,
+        status: issue.status,
+        position: pushpinDetails.position,
+        objectId: pushpinDetails.objectId,
+        viewerState: pushpinDetails.viewerState,
+        customAttributes: issue.customAttributes,
+        displayId: issue.displayId 
+      });
+    }
+  });
+  pushpinExt.loadItemsV2(pushpin);
+  console.log("Pushpin Manager", pushpin);
+  loadIssuesListFiltered(selectedProject, pushpin);
+}
+// #endregion
+
+async function loadIssuesListFiltered(containerId, pushpin) {
+  const divIssueSidebar = document.getElementById("issues-sidebar-items");
+  divIssueSidebar.innerHTML = "";
+  //console.log(allIssues);
+    $.each(pushpin, (index, issue) => {
+    const divSubIcon = document.createElement("div");
+    const customAttributes = issue.customAttributes;
+    const findHemyXLink = customAttributes.filter(
+      (attributes) => attributes.title === "Hemy X Link"
+    );
+    const hemyLinkAttribute = findHemyXLink[0];
+    //   console.log(hemyLinkAttribute);
+    let innerSubIcon = "";
+
+    divSubIcon.setAttribute("id", `div-issue-subicon-${issue.id}`);
+
+    const statusDisplay = {
+      open: {
+        title: "Open",
+        color: "#f5bf42",
+      },
+      draft: {
+        title: "Draft",
+        color: "#000000",
+      },
+      pending: {
+        title: "Pending",
+        color: "blue",
+      },
+      in_review: {
+        title: "In Review",
+        color: "purple",
+      },
+      closed: {
+        title: "Closed",
+        color: "gray",
+      },
+    };
+    // console.log("TEST:",hemyLinkAttribute);
+    // console.log("TEST:",hemyLinkAttribute.value);
+    if (hemyLinkAttribute && hemyLinkAttribute.value) {
+      innerSubIcon = ` <div class="d-block justify-content-between">
+                            <div class="d-flex">
+                               <h6 class="mb-1 fw-bold">${issue.label}</h6>
+                            </div>
+                            <div class="d-flex" style="height: 20px; align-items: center;">
+                                <div style="border-radius: 5px; width: 5px; height: 20px; background-color: ${statusDisplay[issue.status].color
+        }"></div>
+                                <small class="ms-1">${statusDisplay[issue.status].title
+        } &middot;</small>
+                                <a id="deviation-${issue.id
+        }" target="_blank" href="${hemyLinkAttribute.value
+        }" title="Go to record"
+                                    style="color: #495057;" class="ms-2">
+                                    <svg class="w-[18px] h-[18px] text-gray-800 dark:text-white" aria-hidden="true"
+                                        xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                        viewBox="0 0 24 24">
+                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M3 15v3c0 .5523.44772 1 1 1h9.5M3 15v-4m0 4h9m-9-4V6c0-.55228.44772-1 1-1h16c.5523 0 1 .44772 1 1v5H3Zm5 0v8m4-8v8m7.0999-1.0999L21 16m0 0-1.9001-1.9001M21 16h-5" />
+                                    </svg>
+                                </a>
+                            </div>
+                        </div>`;
+    } else {
+      innerSubIcon = ` <div class="d-block justify-content-between">
+                            <div class="d-flex">
+                               <h6 class="mb-1 fw-bold">${issue.label}</h6>
+                            </div>
+                            <div class="d-flex" style="height: 20px; align-items: center;">
+                                <div style="border-radius: 5px; width: 5px; height: 20px; background-color: ${statusDisplay[issue.status].color
+        }"></div>
+                                <small class="ms-1">${statusDisplay[issue.status].title
+        } &middot;</small>
+                            </div>
+                        </div>`;
+    }
+    divSubIcon.innerHTML = innerSubIcon;
+    divSubIcon.className = "sub-icon issue";
+
+    divSubIcon.onclick = (event) => {
+      pushpinExt.selectOne(issue.id);
+      $.each(pushpin, (index, issue_subicon) => {
+        const subicon = document.getElementById(
+          `div-issue-subicon-${issue_subicon.id}`
+        );
+        if (
+          divSubIcon.getAttribute("id") ===
+          `div-issue-subicon-${issue_subicon.id}`
+        ) {
+          subicon.classList.add("active");
+        } else {
+          subicon.classList.remove("active");
+        }
+      });
+      //console.log(divSubIcon.getAttribute("id"));
+    };
+
+    divIssueSidebar.appendChild(divSubIcon);
+  });
+}
+
+
+
+
+// * Load Issues List
 // #region: Load Issues List
 async function loadIssuesList(containerId) {
   const divIssueSidebar = document.getElementById("issues-sidebar-items");

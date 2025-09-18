@@ -105,6 +105,7 @@ router.get(
     try {
       const { containerId } = req.params;
       const filter = req.query;
+      console.log('Filter Query', filter);
       let allIssues = [];
       let offset = 0;
       const limit = 100;

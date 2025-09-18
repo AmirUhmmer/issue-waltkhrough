@@ -3,6 +3,7 @@ import {
   loadModelAndIssues,
   loadModelsandCreateIssue,
   initiateCreateIssueV2,
+  loadIssuePushpinsFiltered
 } from "../../viewer.js";
 
 import { getOneProject } from "../../sidebar.js";
@@ -281,8 +282,10 @@ try {
                 ext.selectOne(issue_id);
               });
             }
-            else if (message.type === "refresh_issues") {
-              
+            else if (message.type === "filter_issue") {
+              const issueStatus = message.issueStatus;
+              const issueSubtype = message.issueSubtype;
+              loadIssuePushpinsFiltered(issueStatus, issueSubtype);
             }
             else {
               console.log(message);

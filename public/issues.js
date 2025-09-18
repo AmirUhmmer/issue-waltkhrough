@@ -29,6 +29,15 @@ export async function getAllIssues(projectId, filter) {
   return await res.json();
 }
 
+export async function getIssuesFiltered(projectId, filter) {
+  const params = new URLSearchParams(filter);
+  const res = await fetch(
+    `${window.location.origin}/api/allIssues/${projectId}?${params}`
+  );
+  //  console.log(res.json());
+  return await res.json();
+}
+
 // export async function initIssueDefs(projectId, containerId) {
 //   const res = await fetch(`/api/issueDataMap/${projectId}/${containerId}`);
 //   await getIssueSubTypes(containerId);
