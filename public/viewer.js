@@ -228,6 +228,21 @@ const modelSetViews = [
       },
     ],
   },
+  {
+    containerId: "39d3702e-4095-44d4-8c29-becf571a90aa",
+    modelSetId: "9f0d8737-f97b-4907-8bea-bead92e3d138",
+    modelSetViewId: "8764d3c9-7695-4fb1-8397-f188f5898b31",
+    "definition": [
+                {
+                    "lineageUrn": "urn:adsk.wipemea:dm.lineage:M5roTczIQUOnle1X26vdUg",
+                    "viewableName": "Cover Sheet View"
+                },
+                {
+                    "lineageUrn": "urn:adsk.wipemea:dm.lineage:RQ0A1TdvSf-KNJ-WZ2b3Tw",
+                    "viewableName": "{3D}"
+      }
+    ]
+  }
 ];
 
 // async function getAccessToken(callback) {
@@ -272,7 +287,7 @@ const modelSetViews = [
 //   });
 // }
 
-
+// test
 // let viewer = null;
 let tokenCache = null;
 let tokenExpiry = 0;
@@ -289,15 +304,25 @@ async function getAccessToken(callback) {
   }
   
   try {
+    const refreshToken = localStorage.getItem("refreshToken");
+    const expiresAt = localStorage.getItem("expires_at");
+    const internalToken = localStorage.getItem("internal_token");
+    
     const resp = await fetch("/api/auth/token", {
       method: "GET",
       credentials: "include",
+      headers: {
+        "X-Refresh-Token": refreshToken || "",
+        "X-Expires-At": expiresAt || "",
+        "X-Internal-Token": internalToken || ""
+      }
     });
     if (!resp.ok) throw new Error(await resp.text());
 
     const { access_token, expires_in } = await resp.json();
     tokenCache = access_token;
-    tokenExpiry = now + expires_in * 1000;
+    // FIX: correct expiry calculation
+    tokenExpiry = now + expires_in;
 
     callback(access_token, expires_in);
     console.log("token fetched");
@@ -1371,6 +1396,7 @@ async function loadIssuesList(containerId) {
   const issues = await getAllIssues(containerId);
   // console.log("Issues", issues);
   $.each(issues, (index, issue) => {
+    // ! BS19
     // #region: bandaid solution bs19
     if(containerId == "1c8224f1-b860-4a2b-821b-d393c94b190d" && (issue.issueTypeId != "318b5e55-0eef-4d61-9059-927fd4d40134" || issue.issueTypeId != "318b5e55-0eef-4d61-9059-927fd4d40134")){
       return;

@@ -44,13 +44,23 @@ server.on('upgrade', (request, socket, head) => {
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-const corsOptions = {
-    origin: '*'
-}
-app.use(cors(corsOptions));
+// const corsOptions = {
+//     origin: '*'
+// }
+// app.use(cors(corsOptions));
 
+app.use(session({
+    secret: SERVER_SESSION_SECRET,
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+        maxAge: 24 * 60 * 60 * 1000,  // 1 day
+        secure: true,                 // Only over HTTPS
+        sameSite: 'None'             // For cross-site cookies
+    }
+}));
 app.use(express.static('public'));
-app.use(session({ secret: SERVER_SESSION_SECRET, maxAge: 24 * 60 * 60 * 1000 }));
+// app.use(session({ secret: SERVER_SESSION_SECRET, maxAge: 24 * 60 * 60 * 1000 }));
 app.use(require('./routes/endpoints/oauth.js'));
 app.use(require('./routes/endpoints/dm.js'));
 app.use(require('./routes/endpoints/issues.js'));

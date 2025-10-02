@@ -74,6 +74,8 @@ try {
   if (resp.ok) {
     const profile = await resp.json();
     //console.log(profile);
+    // console.log('USER', profile);
+    console.log("USER PROFILE", profile.userid);
 
     viewer = await initViewer(document.getElementById("preview"));
     // await initIssueDefs(`b.${containerId}`, containerId);
@@ -109,58 +111,13 @@ try {
       divMainSidebar.classList.add("d-none");
       divHeader.classList.add("d-none");
       const issuePushpin = document.getElementById("input-issue-pushpin");
-      // viewerDiv.style.marginLeft = "280px";
-      // viewerDiv.style.width = "65% !important";
       console.log(src);
       loadModelsandCreateIssue(viewer, containerId, src);
-      //     const issueTypes = await getIssueSubTypesData(containerId);
-      //    const selectIssueType = document.getElementById("selectIssueTypes");
-      //      console.log("Issue Types", issueTypes);
 
-      //     selectIssueType.innerHTML = "";
-      //     issueTypes.forEach((issueType) => {
-      //      const optgroup = document.createElement("optgroup");
-
-      //     optgroup.label = issueType.title;
-      //     issueType.subtypes.forEach((subtype) => {
-      //       const opt = document.createElement("option");
-      //       opt.value = subtype.id;
-      //       opt.textContent = subtype.title;
-      //       optgroup.appendChild(opt);
-      //     });
-      //     selectIssueType.appendChild(optgroup);
-      //   });
-
-      //   selectIssueType.value = "86fb9dd6-fce6-40b3-a49d-0e9437bd8111"; // default to Deviation
-      //   $("#dateStart").datepicker("setDate", new Date());
-      //   $("#dateDue").datepicker("setDate", new Date());
-      //   $("#dateStart").datepicker({ dateFormat: "yy-mm-dd" });
-      //   $("#dateDue").datepicker({ dateFormat: "yy-mm-dd" });
-
-      //   const btnSave = document.getElementById("btn-save");
-      //   const formIssueReporting = document.getElementById(
-      //     "form-issue-reporting"
-      //   );
-      //   formIssueReporting.onsubmit = (event) => {
-      //     event.preventDefault();
-      //     const pushPin = document.getElementById("input-issue-pushpin");
-
-      //     if (pushPin.value === "") {
-      //       alert("Please Click on location of Issue");
-      //       return;
-      //     }
-      //   };
-      //
-      //
       // #region: view issue
     } else if (mode === "viewIssues") {
       console.log("view issues");
-      // const url = await fetch("/api/auth/sso");
-      // if (!url.ok) {
-      //   console.log("Failed to get access token");
-      // }
-      // const url_json = await url.json();
-      //console.log(url_json);
+
 
       await loadModelAndIssues(viewer, {}, containerId);
 
@@ -235,19 +192,6 @@ try {
         divSpinner.classList.remove("d-none");
         divSpinner.classList.add("d-none");
         img.classList.add("d-none");
-        // img.id = itemObject.id;
-        // img.title = itemObject.attributes.displayName;
-        // img.alt = itemObject.attributes.displayName;
-        // img.src = `${window.location.origin}/api/thumbnail/${version.relationships.thumbnails.data.id}?height=50&width=50`;
-
-        // img.onload = () => {
-        //   divSpinner.classList.add("d-none");
-        //   img.classList.remove("d-none");
-        // };
-        // itemDiv.onclick = async () => {
-        //   //  alert(version.id);
-        //   await loadModelAndIssues(viewer, itemObject.latestVersion, containerId);
-        // }
         imageDiv.appendChild(itemDiv);
       });
 
@@ -301,24 +245,16 @@ try {
       }
     }
   } else {
-    // alert("finished");
 
     //#region for prod
-    // await fetch("/api/auth/3lo");
-    // divLoading.classList.remove("d-none");
-    // window.location.reload();
-    //#endregion
 
     const url = await fetch("/api/auth/sso");
-    // window.location.href = url_json;
-    // window.location.reload();
     if (!url.ok) {
       console.log("Failed to get access token");
     }
     const url_json = await url.json();
     console.log(url_json);
     const loginWindow = window.open(url_json, "Login", "width=600,height=600");
-    //   window.location.reload();
     window.addEventListener("message", async (event) => {
       if (event.origin !== window.location.origin) {
         return; // Ignore messages from other origins
@@ -335,36 +271,7 @@ try {
 
         console.log(token);
       }
-    }); //#region  for_localhost
-    // login.style.visibility = "visible";
-    // login.innerText = "Login";
-    // divLoading.classList.add("d-none");
-
-    // login.onclick = () => {
-    //   const loginWindow = window.open(
-    //     "/api/auth/login",
-    //     "Login",
-    //     "width=600,height=600"
-    //   );
-    //   window.addEventListener("message", async (event) => {
-    //     if (event.origin !== window.location.origin) {
-    //       return; // Ignore messages from other origins
-    //     }
-
-    //     const { token, refreshToken, expires_at, internal_token } = event.data;
-    //     if (token) {
-    //       localStorage.setItem("authToken", token);
-    //       localStorage.setItem("refreshToken", refreshToken);
-    //       localStorage.setItem("expires_at", expires_at);
-    //       localStorage.setItem("internal_token", internal_token);
-    //       // const resp = await fetch("/api/auth/profile");
-    //       window.location.reload(); // Reload the page to load viewer with token
-
-    //       console.log(token);
-    //     }
-    //   });
-    // };
-    //   #endregion
+    });
   }
 } catch (err) {
   alert("error displaying application");

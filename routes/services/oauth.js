@@ -1,7 +1,15 @@
 require("dotenv").config();
+
+const { SdkManagerBuilder } = require('@aps_sdk/autodesk-sdkmanager');
+const { AuthenticationClient, Scopes, ResponseType } = require('@aps_sdk/authentication');
+const { DataManagementClient } = require('@aps_sdk/data-management');
+
 const localStorage = require("localStorage");
 const APS = require("forge-apis");
 const axios = require("axios");
+const sdkManager = SdkManagerBuilder.create().build();
+const authenticationClient = new AuthenticationClient(sdkManager);
+const dataManagementClient = new DataManagementClient(sdkManager);
 const { ACCESS_TOKEN, EXPIRES_IN, REFRESH_TOKEN, APP_BASE_URL } = process.env;
 const {
   APS_CLIENT_ID,
@@ -28,9 +36,10 @@ const service = (module.exports = {});
 
 service.getAuthorizationUrl = () => internalAuthClient.generateAuthUrl();
 
+//#region callback url
 service.authCallbackMiddleware = async (req, res, next) => {
   const internalCredentials = await internalAuthClient.getToken(req.query.code);
-
+  
   console.log("INTERNAL CREDS", internalCredentials);
 
   const publicCredentials = await publicAuthClient.refreshToken(
@@ -39,15 +48,25 @@ service.authCallbackMiddleware = async (req, res, next) => {
 
   console.log("PUBLIC CREDS", publicCredentials);
 
+  const profile = await service.getUserProfileBackend(internalCredentials.access_token);
+
+  console.log("PROFILE", profile);
+  const userId = profile.sub
+  req.session.userid = userId;
   req.session.public_token = publicCredentials.access_token;
   req.session.internal_token = internalCredentials.access_token;
   req.session.refresh_token = publicCredentials.refresh_token;
 
   req.session.expires_at = Date.now() + internalCredentials.expires_in * 1000;
 
-  //console.log('PROFILE', profile);
-
-  localStorage.setItem("access_token", req.session.public_token);
+  // localStorage.setItem(`${userId}_access_token`, req.session.public_token);
+  // localStorage.setItem(`${userId}_refresh_token`, publicCredentials.refresh_token);
+  // localStorage.setItem(`${userId}_expires_in`, internalCredentials.expires_in);
+  // localStorage.setItem(
+  //   `${userId}_expires_at`,
+  //   Date.now() + internalCredentials.expires_in * 1000
+  // );
+    localStorage.setItem("access_token", req.session.public_token);
   localStorage.setItem("refresh_token", publicCredentials.refresh_token);
   localStorage.setItem("expires_in", internalCredentials.expires_in);
   localStorage.setItem(
@@ -57,9 +76,14 @@ service.authCallbackMiddleware = async (req, res, next) => {
   next();
 };
 
+
+// ! old refresh middleware
 service.authRefreshMiddleware = async (req, res, next) => {
   //const { refresh_token, expires_at } = req.session;
   const { userEmail } = req.params;
+  // console.log("User id", req.session.userid);
+  // console.log("From user", req.sub);
+
   let refresh_token = localStorage.getItem("refresh_token") ?? REFRESH_TOKEN;
   let expires_at =
     Number(localStorage.getItem("expires_at")) ??
@@ -67,7 +91,14 @@ service.authRefreshMiddleware = async (req, res, next) => {
   let access_token = localStorage.getItem("access_token") ?? ACCESS_TOKEN;
   let expires_in = Number(localStorage.getItem("expires_in")) ?? EXPIRES_IN;
 
-  //console.log('Local Storage', localStorage)
+  // const userId = req.session.userid;
+  // let refresh_token = localStorage.getItem(`${userId}_refresh_token`);
+  // let expires_at =
+  //   Number(localStorage.getItem(`${userId}_expires_at`)) ??
+  //   Date.now() + EXPIRES_IN * 1000;
+  // let access_token = localStorage.getItem(`${userId}_access_token`);
+  // let expires_in = Number(localStorage.getItem(`${userId}_expires_in`));
+
 
   if (!refresh_token) {
     // refresh_token = REFRESH_TOKEN;
@@ -94,13 +125,20 @@ service.authRefreshMiddleware = async (req, res, next) => {
     req.session.refresh_token = publicCredentials.refresh_token;
     req.session.expires_at = Date.now() + internalCredentials.expires_in * 1000;
 
-    localStorage.setItem("access_token", publicCredentials.access_token);
-    localStorage.setItem("refresh_token", publicCredentials.refresh_token);
-    localStorage.setItem("expires_in", internalCredentials.expires_in);
-    localStorage.setItem(
-      "expires_at",
-      Date.now() + internalCredentials.expires_in * 1000
-    );
+        localStorage.setItem("access_token", req.session.public_token);
+  localStorage.setItem("refresh_token", publicCredentials.refresh_token);
+  localStorage.setItem("expires_in", internalCredentials.expires_in);
+  localStorage.setItem(
+    "expires_at",
+    Date.now() + internalCredentials.expires_in * 1000
+  );
+    // localStorage.setItem(`${userId}_access_token`, publicCredentials.access_token);
+    // localStorage.setItem(`${userId}_refresh_token`, publicCredentials.refresh_token);
+    // localStorage.setItem(`${userId}_expires_in`, internalCredentials.expires_in);
+    // localStorage.setItem(
+    //   `${userId}_expires_at`,
+    //   Date.now() + internalCredentials.expires_in * 1000
+    // );
   }
   req.internalOAuthToken = {
     access_token: req.session.internal_token ?? access_token,
@@ -115,10 +153,9 @@ service.authRefreshMiddleware = async (req, res, next) => {
     ),
   };
 
-
-
   next();
 };
+
 
 service.getUserProfile = async (token) => {
   const resp = await new APS.UserProfileApi().getUserProfile(
@@ -126,6 +163,118 @@ service.getUserProfile = async (token) => {
     token
   );
   return resp.body;
+};
+
+// service.getAuthorizationUrl = () => authenticationClient.authorize(APS_CLIENT_ID, ResponseType.Code, APS_CALLBACK_URL, [
+//     Scopes.DataRead,
+//     Scopes.DataWrite,
+//     Scopes.DataCreate,
+//     Scopes.BucketRead,
+//     Scopes.BucketCreate,
+//     Scopes.BucketUpdate,
+//     Scopes.ViewablesRead,
+//     Scopes.AccountRead
+// ]);
+
+// service.authCallbackMiddleware = async (req, res, next) => {
+//     const internalCredentials = await authenticationClient.getThreeLeggedToken(APS_CLIENT_ID, req.query.code, APS_CALLBACK_URL, {
+//         clientSecret: APS_CLIENT_SECRET,
+//         scopes: [
+//             Scopes.DataRead,
+//             Scopes.DataWrite,
+//             Scopes.DataCreate,
+//             Scopes.BucketRead,
+//             Scopes.BucketCreate,
+//             Scopes.BucketUpdate,
+//             Scopes.ViewablesRead,
+//             Scopes.AccountRead
+//         ]
+//     });
+//     const publicCredentials = await authenticationClient.refreshToken(internalCredentials.refresh_token, APS_CLIENT_ID, {
+//         clientSecret: APS_CLIENT_SECRET,
+//         scopes: [
+//             Scopes.DataRead,
+//             Scopes.DataWrite,
+//             Scopes.DataCreate,
+//             Scopes.BucketRead,
+//             Scopes.BucketCreate,
+//             Scopes.BucketUpdate,
+//             Scopes.ViewablesRead,
+//             Scopes.AccountRead
+//         ]
+//     });
+//     req.session.public_token = publicCredentials.access_token;
+//     req.session.internal_token = internalCredentials.access_token;
+//     req.session.refresh_token = publicCredentials.refresh_token;
+//     req.session.expires_at = Date.now() + internalCredentials.expires_in * 1000;
+//     console.log("Internal Token in callback middleware:", req.session.internal_token);
+//     console.log("Public Token in callback middleware:", req.session.public_token);
+//     console.log("Refresh Token in callback middleware:", req.session.refresh_token);
+//     console.log("Expires at in callback middleware:", req.session.expires_at);
+//     next();
+// };
+
+// service.authRefreshMiddleware = async (req, res, next) => {
+//  // First check session
+//     let { refresh_token, expires_at, internal_token } = req.session;
+
+//     // If not in session, hydrate from headers
+//     if (!refresh_token && req.headers["x-refresh-token"]) {
+//       refresh_token = req.headers["x-refresh-token"];
+//       expires_at = req.headers["x-expires-at"];
+//       internal_token = req.headers["x-internal-token"];
+
+//       // Save them into session for next time
+//       req.session.refresh_token = refresh_token;
+//       req.session.expires_at = expires_at;
+//       req.session.internal_token = internal_token;
+//       console.log("Session hydrated from headers");
+//     }
+
+//     if (!refresh_token) {
+//       return res.status(401).end();
+//     }
+
+//     console.log("Using refresh token:", refresh_token);
+
+//     if (expires_at < Date.now()) {
+//         const internalCredentials = await authenticationClient.refreshToken(refresh_token, APS_CLIENT_ID, {
+//             clientSecret: APS_CLIENT_SECRET,
+//             scopes: [Scopes.DataRead, Scopes.DataCreate]
+//         });
+//         const publicCredentials = await authenticationClient.refreshToken(internalCredentials.refresh_token, APS_CLIENT_ID, {
+//             clientSecret: APS_CLIENT_SECRET,
+//             scopes: [Scopes.ViewablesRead]
+//         });
+//         req.session.public_token = publicCredentials.access_token;
+//         req.session.internal_token = internalCredentials.access_token;
+//         req.session.refresh_token = publicCredentials.refresh_token;
+//         req.session.expires_at = Date.now() + internalCredentials.expires_in * 1000;
+//     }
+//     req.internalOAuthToken = {
+//         access_token: req.session.internal_token,
+//         expires_in: Math.round((req.session.expires_at - Date.now()) / 1000),
+//     };
+//     req.publicOAuthToken = {
+//         access_token: req.session.public_token,
+//         expires_in: Math.round((req.session.expires_at - Date.now()) / 1000),
+//     };
+//     next();
+// };
+
+// service.getUserProfile = async (accessToken) => {
+//     console.log("Access Token in getUserProfile:", accessToken);
+//     const resp = await authenticationClient.getUserInfo(accessToken);
+//     return resp;
+// };
+
+service.getUserProfileBackend = async (token) => {
+  const resp = await axios.get("https://api.userprofile.autodesk.com/userinfo", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return resp.data;
 };
 
 service.getTokens = async (email) => {

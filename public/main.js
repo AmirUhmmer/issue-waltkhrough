@@ -21,6 +21,7 @@ const div_container = document.getElementById("div-container");
 const icon_sidebar = document.getElementById("iconSidebar");
 
 try {
+  console.log("Checking authentication...");
   const resp = await fetch("/api/auth/profile", {
     method: "GET",
     credentials: "include",
@@ -29,6 +30,8 @@ try {
   //console.log('RESPONSE2',await resp2.json());
   if (resp.ok) {
     const user = await resp.json();
+    console.log('USER', user);
+    console.log("USER PROFILE", user.name);
     //login.innerText = `Logout (${user.name})`;
     login.style.visibility = "hidden";
     login.style.display = "none";
@@ -65,7 +68,7 @@ try {
           localStorage.setItem('authToken', token);
           localStorage.setItem('refreshToken', refreshToken);
           localStorage.setItem('expires_at', expires_at);
-          localStorlage.setItem('internal_token', internal_token);
+          // localStorlage.setItem('internal_token', internal_token);
           // const resp = await fetch("/api/auth/profile");
           window.location.reload();  // Reload the page to load viewer with token
 
