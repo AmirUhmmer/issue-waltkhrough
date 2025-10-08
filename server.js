@@ -44,10 +44,10 @@ server.on('upgrade', (request, socket, head) => {
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-// const corsOptions = {
-//     origin: '*'
-// }
-// app.use(cors(corsOptions));
+const corsOptions = {
+    origin: '*'
+}
+app.use(cors(corsOptions));
 
 app.use(session({
     secret: SERVER_SESSION_SECRET,

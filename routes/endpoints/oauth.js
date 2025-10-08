@@ -186,28 +186,28 @@ router.get("/api/auth/token", authRefreshMiddleware, function (req, res) {
   res.json(req.publicOAuthToken);
 });
 
-router.get(
-  "/api/auth/profile",
-  authRefreshMiddleware,
-  async function (req, res, next) {
-    try {
-      const profile = await getUserProfile(req.internalOAuthToken);
-      res.json({ name: `${profile.family_name}, ${profile.given_name}`, userid: profile.sub });
-    } catch (err) {
-      next(err.data);
-    }
-  }
-);
-
-
-// router.get('/api/auth/profile', authRefreshMiddleware, async function (req, res, next) {
+// router.get(
+//   "/api/auth/profile",
+//   authRefreshMiddleware,
+//   async function (req, res, next) {
 //     try {
-//         const profile = await getUserProfile(req.internalOAuthToken.access_token);
-//         res.json({ name: `${profile.family_name}, ${profile.given_name}`, userid: profile.sub });
+//       const profile = await getUserProfile(req.internalOAuthToken);
+//       res.json({ name: `${profile.family_name}, ${profile.given_name}`, userid: profile.sub });
 //     } catch (err) {
-//         next(err);
+//       next(err.data);
 //     }
-// });
+//   }
+// );
+
+
+router.get('/api/auth/profile', authRefreshMiddleware, async function (req, res, next) {
+    try {
+        const profile = await getUserProfile(req.internalOAuthToken.access_token);
+        res.json({ name: `${profile.family_name}, ${profile.given_name}`, userid: profile.sub });
+    } catch (err) {
+        next(err);
+    }
+});
 
 router.get(
   "/api/auth/profile/:userEmail",

@@ -6,7 +6,20 @@ import {
 } from "./viewer.js";
 var currentContainerId = null;
 async function getIssueSubTypes(containerId) {
-  const res = await fetch(`/api/issueSubTypes/${containerId}`);
+  const token = localStorage.getItem("authTokenHemyIssue");
+  const refreshToken = localStorage.getItem("refreshTokenHemyIssue");
+  const expires_at = localStorage.getItem("expires_atHemyIssue");
+  const internal_token = localStorage.getItem("internal_tokenHemyIssue");
+
+  const res = await fetch(`/api/issueSubTypes/${containerId}`,
+    {
+      headers: {
+            'Authorization': `Bearer ${token}`,  // Send authToken in the Authorization header
+            'x-refresh-token': refreshToken,         // Send refreshToken in a custom header
+            'x-expires-at': expires_at,              // Send expires_at in a custom header
+            'x-internal-token': internal_token       // Send internal_token in a custom header
+        }
+    });
   const issueSubTypes = await res.json();
   return issueSubTypes.map((t) =>
     $("#dropdownIssueTypes").append($("<option>").val(t.id).text(t.title))
@@ -14,26 +27,60 @@ async function getIssueSubTypes(containerId) {
 }
 
 export async function getIssueSubTypesData(containerId) {
-  const res = await fetch(`/api/issueTypes/${containerId}`);
+  const token = localStorage.getItem("authTokenHemyIssue");
+  const refreshToken = localStorage.getItem("refreshTokenHemyIssue");
+  const expires_at = localStorage.getItem("expires_atHemyIssue");
+  const internal_token = localStorage.getItem("internal_tokenHemyIssue");
+
+  const res = await fetch(`/api/issueTypes/${containerId}`, {
+      headers: {
+            'Authorization': `Bearer ${token}`,  // Send authToken in the Authorization header
+            'x-refresh-token': refreshToken,         // Send refreshToken in a custom header
+            'x-expires-at': expires_at,              // Send expires_at in a custom header
+            'x-internal-token': internal_token       // Send internal_token in a custom header
+        }
+    });
   const issueTypes = await res.json();
   return issueTypes;
   //    return issueSubTypes.map(t => $('#dropdownIssueTypes').append($('<option>').val(t.id).text(t.title)));
 }
 
 export async function getAllIssues(projectId, filter) {
+  const token = localStorage.getItem('authTokenHemyIssue');
+  const refreshToken = localStorage.getItem('refreshTokenHemyIssue');
+  const expires_at = localStorage.getItem('expires_atHemyIssue');
+  const internal_token = localStorage.getItem('internal_tokenHemyIssue');
+
   const params = new URLSearchParams(filter);
   const res = await fetch(
-    `${window.location.origin}/api/allIssues/${projectId}?${params}`
-  );
+    `${window.location.origin}/api/allIssues/${projectId}?${params}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`,  // Send authToken in the Authorization header
+            'x-refresh-token': refreshToken,         // Send refreshToken in a custom header
+            'x-expires-at': expires_at,              // Send expires_at in a custom header
+            'x-internal-token': internal_token       // Send internal_token in a custom header
+        }
+    });
   //  console.log(res.json());
   return await res.json();
 }
 
 export async function getIssuesFiltered(projectId, filter) {
+  const token = localStorage.getItem('authTokenHemyIssue');
+  const refreshToken = localStorage.getItem('refreshTokenHemyIssue');
+  const expires_at = localStorage.getItem('expires_atHemyIssue');
+  const internal_token = localStorage.getItem('internal_tokenHemyIssue');
+
   const params = new URLSearchParams(filter);
   const res = await fetch(
-    `${window.location.origin}/api/allIssues/${projectId}?${params}`
-  );
+    `${window.location.origin}/api/allIssues/${projectId}?${params}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`,  // Send authToken in the Authorization header
+            'x-refresh-token': refreshToken,         // Send refreshToken in a custom header
+            'x-expires-at': expires_at,              // Send expires_at in a custom header
+            'x-internal-token': internal_token       // Send internal_token in a custom header
+        }
+    });
   //  console.log(res.json());
   return await res.json();
 }

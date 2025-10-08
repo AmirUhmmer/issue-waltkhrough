@@ -304,27 +304,36 @@ async function getAccessToken(callback) {
   }
   
   try {
-    const refreshToken = localStorage.getItem("refreshToken");
-    const expiresAt = localStorage.getItem("expires_at");
-    const internalToken = localStorage.getItem("internal_token");
+    const authToken = localStorage.getItem("authTokenHemyIssue");
+    const refreshToken = localStorage.getItem("refreshTokenHemyIssue");
+    const expiresAt = localStorage.getItem("expires_atHemyIssue");
+    const internalToken = localStorage.getItem("internal_tokenHemyIssue");
+
+    // const resp = await fetch("/api/auth/token", {
+    //   method: "GET",
+    //   credentials: "include",
+    //   headers: {
+    //     "X-Refresh-Token": refreshToken || "",
+    //     "X-Expires-At": expiresAt || "",
+    //     "X-Internal-Token": internalToken || "",
+    //   },
+    // });
+    // if (!resp.ok) throw new Error(await resp.text());
+
+    // // Read body once
+    // const data = await resp.json();
+    // console.log("Token response data:", data);
+
+    // // Extract values
+    // const access_token = data.access_token;
+    // const expires_in = data.expires_in;
     
-    const resp = await fetch("/api/auth/token", {
-      method: "GET",
-      credentials: "include",
-      headers: {
-        "X-Refresh-Token": refreshToken || "",
-        "X-Expires-At": expiresAt || "",
-        "X-Internal-Token": internalToken || ""
-      }
-    });
-    if (!resp.ok) throw new Error(await resp.text());
+    // tokenCache = access_token;
+    // tokenExpiry = now + expires_in;
 
-    const { access_token, expires_in } = await resp.json();
-    tokenCache = access_token;
-    // FIX: correct expiry calculation
-    tokenExpiry = now + expires_in;
-
-    callback(access_token, expires_in);
+    console.log("token fetched, expires in", expiresAt, "seconds");
+    console.log("access_token:", authToken);
+    callback(authToken, expiresAt);
     console.log("token fetched");
   } catch (err) {
     alert("Could not obtain access token. See console for more details.");
@@ -1208,13 +1217,14 @@ async function loadIssuePushpins(filter = {}) {
           viewerState: pushpinDetails.viewerState,
         });
       }
+      // #endregion
 
     }
   });
   pushpinExt.loadItemsV2(pushpin);
   console.log("Pushpin Manager", pushpin);
 }
-
+// #endregion
 
 
 // ! pushpin filtered
@@ -1281,6 +1291,7 @@ export async function loadIssuePushpinsFiltered(issueStatus, issueSubtype) {
 }
 // #endregion
 
+// #region: Load Issues List Filtered
 async function loadIssuesListFiltered(containerId, pushpin) {
   const divIssueSidebar = document.getElementById("issues-sidebar-items");
   divIssueSidebar.innerHTML = "";
@@ -1382,6 +1393,7 @@ async function loadIssuesListFiltered(containerId, pushpin) {
     divIssueSidebar.appendChild(divSubIcon);
   });
 }
+// #endregion
 
 
 
@@ -1401,6 +1413,7 @@ async function loadIssuesList(containerId) {
     if(containerId == "1c8224f1-b860-4a2b-821b-d393c94b190d" && (issue.issueTypeId != "318b5e55-0eef-4d61-9059-927fd4d40134" || issue.issueTypeId != "318b5e55-0eef-4d61-9059-927fd4d40134")){
       return;
     };
+    // #endregion
     const divSubIcon = document.createElement("div");
     const customAttributes = issue.customAttributes;
     const findHemyXLink = customAttributes.filter(
@@ -1638,6 +1651,7 @@ async function initIssueCreate() {
     }
   );
 }
+// #endregion
 
 // #region: Create Issue v2
 export async function initiateCreateIssueV2(viewer, message, userGuid) {
@@ -1747,7 +1761,9 @@ export async function initiateCreateIssueV2(viewer, message, userGuid) {
     await upsert_pushpin_details(pushpin_item);
   });
 }
+// #endregion
 
+// #region: Create Issue Mobile
 export async function initiateCreateIssue_Mobile(viewer, message, userGuid) {
   const pushpin_ext = await viewer.loadExtension(
     "Autodesk.BIM360.Extension.PushPin"
@@ -1841,4 +1857,193 @@ export async function initiateCreateIssue_Mobile(viewer, message, userGuid) {
     const pushpin_item = event.value;
     await upsert_pushpin_details(pushpin_item);
   });
+}
+// #endregion
+
+
+// ! highlight HA/FL
+// #region: highlight HA/FL
+export async function navigateHAFL(viewer, ha, fl) {
+  const models = viewer.impl.modelQueue().getModels();
+  if (!models?.length) {
+    console.warn("No models loaded.");
+    return;
+  }
+
+  const searchTerms = [ha, fl].filter(Boolean);
+  if (!searchTerms.length) {
+    console.warn("No valid Hard Asset or Functional Location provided.");
+    return;
+  }
+
+  console.log("Searching for:", searchTerms);
+
+  for (const model of models) {
+    let modelDbIds = [];
+
+    for (const term of searchTerms) {
+      await new Promise((resolve) => {
+        model.search(
+          term,
+          (dbIDs) => {
+            if (dbIDs?.length) {
+              console.log(`Found ${dbIDs.length} in model for: ${term}`);
+              modelDbIds.push(...dbIDs);
+
+              const color = new THREE.Vector4(0, 1, 0, 1);
+              dbIDs.forEach(id => viewer.setThemingColor(id, color, model));
+              viewer.setSelectionColor(new THREE.Color(0, 1, 0));
+              viewer.select(dbIDs, model);
+            }
+            resolve();
+          },
+          (error) => {
+            console.error("Search error:", error);
+            resolve();
+          }
+        );
+      });
+    }
+
+    if (modelDbIds.length > 0) {
+      const uniqueIds = [...new Set(modelDbIds)];
+      console.log(`Model isolate/focus for ${uniqueIds.length} dbIDs`);
+      console.log("Unique IDs:", uniqueIds);
+
+      const box = new THREE.Box3();
+      const fragList = model.getFragmentList();
+      const instanceTree = model.getData().instanceTree;
+
+      for (const id of uniqueIds) {
+        const fragIds = [];
+        instanceTree.enumNodeFragments(id, fragId => fragIds.push(fragId));
+
+        if (fragIds.length === 0) {
+          console.warn(`⚠️ No fragments found for dbId ${id}`);
+          continue;
+        }
+
+        fragIds.forEach(fragId => {
+          const fragBox = new THREE.Box3();
+          fragList.getWorldBounds(fragId, fragBox);
+          if (!fragBox.isEmpty()) {
+            box.union(fragBox);
+          }
+        });
+      }
+
+      if (box.isEmpty()) {
+        console.warn("⚠️ No valid bounding box found, using fitToView.");
+        viewer.fitToView(uniqueIds, model);
+        return;
+      }
+
+      console.log("✅ Final merged box:", box);
+
+
+
+      const targetCenter = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const expandFactor = 1.5;
+      box.expandByVector(size.clone().multiplyScalar(expandFactor));
+
+      const nav = viewer.navigation;
+      const camera = nav.getCamera();
+      if (!camera.isPerspective) nav.toPerspective();
+
+      const radius = size.length() * 1.5;
+      const directions = [];
+      const numCandidates = 16;
+
+      for (let i = 0; i < numCandidates; i++) {
+        const angle = (i / numCandidates) * Math.PI * 2;
+        directions.push(
+          new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0.2).normalize()
+        );
+      }
+
+      let bestEye = null;
+      let bestScore = -Infinity;
+
+      for (const dir of directions) {
+        const eye = targetCenter.clone().add(dir.clone().multiplyScalar(radius));
+        const raycaster = new THREE.Raycaster(eye, targetCenter.clone().sub(eye).normalize());
+        const hits = raycaster.intersectObjects(viewer.impl.scene.children, true);
+        const score = -hits.length;
+        if (score > bestScore) {
+          bestScore = score;
+          bestEye = eye;
+        }
+      }
+
+      // if (!bestEye) bestEye = targetCenter.clone().add(new THREE.Vector3(radius, radius, radius).normalize().multiplyScalar(radius));
+
+      // const currentPos = viewer.navigation.getPosition().clone();
+      // const currentTarget = viewer.navigation.getTarget().clone();
+      // const steps = 30;
+      // let t = 0;
+      // const animate = () => {
+      //   t += 1 / steps;
+      //   if (t > 1) t = 1;
+
+      //   const newPos = currentPos.clone().lerp(bestEye, t);
+      //   const newTarget = currentTarget.clone().lerp(targetCenter, t);
+
+      //   viewer.navigation.setView(newPos, newTarget);
+
+      //   if (t < 1) requestAnimationFrame(animate);
+      // };
+      // animate();
+
+      // console.log("✅ Best-view computed eye:", bestEye);
+
+      const up = new THREE.Vector3(0, 0, 1); // Z-up, not Y-up
+      viewer.navigation.setView(bestEye, targetCenter);
+      viewer.navigation.setWorldUpVector(up);
+      viewer.impl.sceneUpdated(true);
+
+    }
+  }
+}
+
+
+
+// http://localhost:8080/pages/viewer/?useOPFS=true&containerId=bf8f603c-7e37-4367-9900-69e279377191&mode=viewIssues&userGuid=35fb5799-aaff-4225-9344-1faa6c3d810d&hardAsset=9915efcf-d42f-ef11-840b-0022489fdfca&FL=9220dd8b-3861-ee11-8df0-0022489fd3f3
+// #endregion
+
+
+async function getAccurateBoundingBox(viewer, model, dbId) {
+  const fragList = model.getFragmentList();
+  const tree = model.getData().instanceTree;
+  const box = new THREE.Box3();
+
+  // collect fragment IDs
+  const fragIds = [];
+  tree.enumNodeFragments(dbId, fragId => fragIds.push(fragId));
+
+  fragIds.forEach(fragId => {
+    const fragProxy = viewer.impl.getFragmentProxy(model, fragId);
+    const renderProxy = viewer.impl.getRenderProxy(model, fragId);
+
+    if (!renderProxy?.geometry) return;
+
+    fragProxy.updateAnimTransform();
+    const matrix = new THREE.Matrix4();
+    fragProxy.getWorldMatrix(matrix);
+
+    const geom = renderProxy.geometry;
+    const posAttr = geom.attributes?.position;
+    if (!posAttr) return;
+
+    const positions = posAttr.array;
+    const vertex = new THREE.Vector3();
+
+    for (let i = 0; i < positions.length; i += 3) {
+      vertex.set(positions[i], positions[i + 1], positions[i + 2]);
+      vertex.applyMatrix4(matrix);
+      box.expandByPoint(vertex);
+    }
+  });
+
+  return box.isEmpty() ? null : box;
 }

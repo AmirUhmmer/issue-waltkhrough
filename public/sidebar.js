@@ -1,11 +1,38 @@
+// async function getJSON(url) {
+//   const resp = await fetch(url);
+//   if (!resp.ok) {
+//     alert("Could not load tree data. See console for more details.");
+//     console.error(await resp.text());
+//     return [];
+//   }
+//   return resp.json();
+// }
+
 async function getJSON(url) {
-  const resp = await fetch(url);
-  if (!resp.ok) {
-    alert("Could not load tree data. See console for more details.");
-    console.error(await resp.text());
-    return [];
-  }
-  return resp.json();
+    const token = localStorage.getItem('authTokenHemyIssue');
+    const refreshToken = localStorage.getItem('refreshTokenHemyIssue');
+    const expires_at = localStorage.getItem('expires_atHemyIssue');
+    const internal_token = localStorage.getItem('internal_tokenHemyIssue');
+
+
+    console.log("Request URL:", url);
+    // console.log("Authorization Header:", `Bearer ${token}`);
+
+    const resp = await fetch(url, {
+        headers: {
+            'Authorization': `Bearer ${token}`,  // Send authToken in the Authorization header
+            'x-refresh-token': refreshToken,         // Send refreshToken in a custom header
+            'x-expires-at': expires_at,              // Send expires_at in a custom header
+            'x-internal-token': internal_token       // Send internal_token in a custom header
+        }
+    });
+    // if (!resp.ok) {
+    //     fetchAccessToken();
+    //     alert('Could not load tree data. See console for more details.');
+    //     console.error(await resp.text());
+    //     // return [];
+    // }
+    return resp.json();
 }
 
 function createTreeNode(id, text, icon, children = false) {
