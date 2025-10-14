@@ -111,6 +111,7 @@
 //   alert("error displaying application");
 //   console.log(err);
 // }
+
 import {
   initViewer,
   loadModelsandCreateIssue,
@@ -173,7 +174,18 @@ async function loadViewer(containerId, issueId, src) {
   const viewer = await initViewer(document.getElementById("preview"));
   if (!issueId || !containerId) return;
 
-  const issue = await fetch(`/api/issue/${containerId}/${issueId}`);
+  const issue = await fetch(`/api/issue/${containerId}/${issueId}`, 
+    {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem("authTokenHemyIssue")}`,
+        "x-refresh-token": localStorage.getItem("refreshTokenHemyIssue"), // Send refreshToken in a custom header
+        "x-expires-at": localStorage.getItem("expires_atHemyIssue"), // Send expires_at in a custom header
+        "x-internal-token": localStorage.getItem("internal_tokenHemyIssue"), // Send internal_token in a custom header
+      },
+    }
+  );
   const issueDetails = await issue.json();
 
   console.log("Issue:", issueDetails);

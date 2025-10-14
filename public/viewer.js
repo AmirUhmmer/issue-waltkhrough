@@ -23,6 +23,8 @@ const params = new URLSearchParams(window.location.search);
 const userGuid = params.get("userGuid");
 const deviceType = params.get("deviceType");
 const newGuid = params.get("newGuid");
+const hardAsset = params.get("hardAsset");
+const functionalLocation = params.get("floc");
 
 
 const modelSetViews = [
@@ -136,12 +138,16 @@ const modelSetViews = [
   },
   {
     containerId: "a08e2cf9-5b5c-4254-883e-15a9fcf3cb5c",
-    modelSetId: "981d3313-3ea4-419d-9c47-3a9837ae4570",
-    modelSetViewId: "3f6d8589-bd8c-404f-b0b9-db847f90d807",
+    // modelSetId: "981d3313-3ea4-419d-9c47-3a9837ae4570",
+    // modelSetViewId: "3f6d8589-bd8c-404f-b0b9-db847f90d807",
     definition: [
       {
         lineageUrn: "urn:adsk.wipemea:dm.lineage:k9jCDybIRKK0DqORUNDnrA",
         viewableName: "SEMY-SOL20-ARST-ASBUILT",
+      },
+      {
+        lineageUrn: "urn:adsk.wipemea:dm.lineage:F5rNrMwxSOaRGKtW8iwl1g",
+        viewableName: "SEMY-SOL20-MEP",
       },
     ],
   },
@@ -636,145 +642,204 @@ export async function loadModelAndIssues(viewer, item, projectId) {
 
 // ! load models
 // #region load models
+// async function getProjectModels(containerId) {
+//   let offset = null;
+//   let modelsLoaded = 0;
+//   function onDocumentLoadSuccess(doc) {
+//     const geometry = doc.getRoot().getDefaultGeometry();
+//     // geometry?.globalOffset || 
+//     // const offset = geometry?.globalOffset || { x: 0, y: 0, z: 0 };
+
+//     // const loadOptions = {
+//     //   globalOffset: offset,
+//     //   keepCurrentModels: true,
+//     //   placementTransform: new THREE.Matrix4().setPosition(offset),
+//     // };
+//      console.log("Models loaded count:", modelsLoaded);
+
+//     const loadOptions = {
+//       keepCurrentModels: true,
+//       applyRefPoint: true,
+//       skipHiddenFragments: true,
+//       ...(modelsLoaded > 0 && { globalOffset: offset })
+//     };
+
+//     const modelOrPromise = viewer.loadDocumentNode(doc, geometry, loadOptions);
+
+//     Promise.resolve(modelOrPromise).then((model) => {
+//       modelsLoaded++;
+
+//       if (modelsLoaded === 1) {
+//         offset = model?.getData()?.globalOffset || { x: 0, y: 0, z: 0 };
+//         console.log("✅ Saved offset from first model:", offset);
+//       }
+
+//       console.log(`✅ Model #${modelsLoaded} fully loaded`);
+//     }).catch((err) => {
+//       console.error("Error loading model:", err);
+//     });
+
+//     viewer.addEventListener(
+//       Autodesk.Viewing.GEOMETRY_LOADED_EVENT,
+//       modelLoaded
+//     );
+//   }
+
+//   function onDocumentLoadFailure(code, message) {
+//     alert("Could not load model. See console for more details.");
+//     console.error(message);
+//   }
+
+//   const projectItems = await getOneProject(containerId);
+//   console.log("PRoject Items", projectItems);
+//   modelCount = projectItems.length;
+//   const modelSet = modelSetViews.filter(
+//     (model) => model.containerId === containerId
+//   );
+//   // ? MODEL SET IN ACC??
+//   if (modelSet.length > 0) {
+//     modelCount = modelSet[0].definition.length;
+//     const projectItemResults = await Promise.all(projectItems);
+//     modelSet[0].definition.forEach(async (model, index) => {
+//       const objItem = projectItemResults.filter(
+//         (item) => item.id === model.lineageUrn
+//       );
+//       //    console.log(objItem);
+
+//       if (objItem[0].latestVersion) {
+//         g_projectItems.push(objItem[0]);
+//         const urn = window.btoa(objItem[0].latestVersion.id).replace(/=/g, "");
+//         console.log("Item URN", urn);
+//         Autodesk.Viewing.Document.load(
+//           `urn:${urn}`,
+//           onDocumentLoadSuccess,
+//           onDocumentLoadFailure
+//         );
+
+//       }
+//     });
+//   } else {
+//     projectItems.forEach(async (item, index) => {
+//       const itemObj = await item;
+//       const latestVersion = itemObj.latestVersion;
+//       // issueFilter = {
+//       //   "filter[linkedDocumentUrn]": itemObj.id,
+//       // };
+//       // allIssues = await getAllIssues(projectId, issueFilter);
+//       //      console.log("ItemObj", itemObj);
+//       g_projectItems.push(itemObj);
+//       const urn = window.btoa(latestVersion.id).replace(/=/g, "");
+//       console.log("Item URN", urn);
+//       Autodesk.Viewing.Document.load(
+//         `urn:${urn}`,
+//         onDocumentLoadSuccess,
+//         onDocumentLoadFailure
+//       );
+//     });
+//   }
+// }
+
+
 async function getProjectModels(containerId) {
-  // function onDocumentLoadSuccess(doc) {
-  //   const loadOptions = {
-  //     globalOffset: { x: 0, y: 0, z: 0 }, // force all models to origin
-  //     applyRefPoint: true, // Apply reference point to all models
-  //     // placementTransform: new THREE.Matrix4().setPosition({ x: 0, y: 0, z: 0 }), // Force placement to origin
-  //     keepCurrentModels: true, // Keeps existing models in the viewer
-  //     placementTransform: new THREE.Matrix4().setPosition(m.xform)
-  //   };
-  //   const geometry = doc.getRoot().getDefaultGeometry();
-  //   console.log("geometry node:", geometry);
-  //   viewer.loadDocumentNode(
-  //     doc,
-  //     doc.getRoot().getDefaultGeometry(),
-  //     loadOptions
-  //   );
-
-  //   viewer.addEventListener(
-  //     Autodesk.Viewing.GEOMETRY_LOADED_EVENT,
-  //     modelLoaded
-  //   );
-  // }
-
-  function onDocumentLoadSuccess(doc) {
-    const geometry = doc.getRoot().getDefaultGeometry();
-    // geometry?.globalOffset || 
-    const offset = geometry?.globalOffset || { x: 0, y: 0, z: 0 };
-
-    const loadOptions = {
-      globalOffset: offset,
-      keepCurrentModels: true,
-      placementTransform: new THREE.Matrix4().setPosition(offset),
-    };
-
-    viewer.loadDocumentNode(doc, geometry, loadOptions);
-
-    viewer.addEventListener(
-      Autodesk.Viewing.GEOMETRY_LOADED_EVENT,
-      modelLoaded
-    );
-  }
-  // let offset = null;
-  // let modelsLoaded = 0;
-  // async function onDocumentLoadSuccess(doc) {
-  //     let viewables = doc.getRoot().getDefaultGeometry();
-
-  //     let loadOptions;
-  //     console.log("Loaded Model Count:", modelsLoaded);
-  //     if (modelsLoaded === 0) {
-  //         loadOptions = {
-  //             keepCurrentModels: true,
-  //             applyRefPoint: true,
-  //             skipHiddenFragments: true
-  //         };
-  //     } else {
-  //         loadOptions = {
-  //             keepCurrentModels: true,
-  //             globalOffset: offset, // now it has the first model’s value
-  //             applyRefPoint: true,
-  //             skipHiddenFragments: true
-  //         };
-  //     }
-
-  //     try {
-  //         console.log("Loading model with options:", loadOptions);
-  //         const model = await viewer.loadDocumentNode(doc, viewables, loadOptions);
-
-  //         // save offset from the *first* model
-  //         if (modelsLoaded === 0) {
-  //             offset = model.getData().globalOffset || { x: 0, y: 0, z: 0 };
-  //             console.log("Saved offset from first model:", offset);
-  //         }
-  //         modelsLoaded++;
-  //           viewer.addEventListener(
-  //             Autodesk.Viewing.GEOMETRY_LOADED_EVENT,
-  //             modelLoaded
-  //           );
-
-  //     } catch (error) {
-  //         console.error("Error loading model into viewer:", error);
-  //         alert("Error loading model into viewer. See console for details.");
-  //     }
-  // }
-
+  let offset = null;
+  let modelsLoaded = 0;
 
   function onDocumentLoadFailure(code, message) {
     alert("Could not load model. See console for more details.");
     console.error(message);
   }
 
+  function onDocumentLoadSuccess(doc) {
+    return new Promise((resolve, reject) => {
+      const geometry = doc.getRoot().getDefaultGeometry();
+      const loadOptions = {
+        keepCurrentModels: true,
+        applyRefPoint: true,
+        skipHiddenFragments: true,
+        ...(modelsLoaded > 0 && { globalOffset: offset }),
+      };
+
+      // ✅ Keep this listener
+      viewer.addEventListener(
+        Autodesk.Viewing.GEOMETRY_LOADED_EVENT,
+        modelLoaded
+      );
+
+      const modelOrPromise = viewer.loadDocumentNode(doc, geometry, loadOptions);
+
+      // await modelLoaded();
+
+      Promise.resolve(modelOrPromise)
+        .then((model) => {
+          modelsLoaded++;
+          if (modelsLoaded === 1) {
+            offset = model?.getData()?.globalOffset || { x: 0, y: 0, z: 0 };
+            console.log("✅ Saved offset from first model:", offset);
+          }
+
+          console.log(`✅ Model #${modelsLoaded} fully loaded`);
+          resolve();
+        })
+        .catch((err) => {
+          console.error("Error loading model:", err);
+          reject(err);
+        });
+    });
+  }
+
   const projectItems = await getOneProject(containerId);
-  console.log("PRoject Items", projectItems);
+  console.log("Project Items", projectItems);
+  let modelList = [];
   modelCount = projectItems.length;
+
   const modelSet = modelSetViews.filter(
     (model) => model.containerId === containerId
   );
+
   if (modelSet.length > 0) {
-    modelCount = modelSet[0].definition.length;
     const projectItemResults = await Promise.all(projectItems);
-    modelSet[0].definition.forEach(async (model, index) => {
-      const objItem = projectItemResults.filter(
+    modelList = modelSet[0].definition.map((model) => {
+      const objItem = projectItemResults.find(
         (item) => item.id === model.lineageUrn
       );
-      //    console.log(objItem);
-
-      if (objItem[0].latestVersion) {
-        g_projectItems.push(objItem[0]);
-        const urn = window.btoa(objItem[0].latestVersion.id).replace(/=/g, "");
-        console.log("Item URN", urn);
-        Autodesk.Viewing.Document.load(
-          `urn:${urn}`,
-          onDocumentLoadSuccess,
-          onDocumentLoadFailure
-        );
-
-      }
-    });
+      return objItem?.latestVersion ? objItem : null;
+    }).filter(Boolean);
   } else {
-    projectItems.forEach(async (item, index) => {
-      const itemObj = await item;
-      const latestVersion = itemObj.latestVersion;
-      // issueFilter = {
-      //   "filter[linkedDocumentUrn]": itemObj.id,
-      // };
-      // allIssues = await getAllIssues(projectId, issueFilter);
-      //      console.log("ItemObj", itemObj);
-      g_projectItems.push(itemObj);
-      const urn = window.btoa(latestVersion.id).replace(/=/g, "");
-      console.log("Item URN", urn);
+    modelList = await Promise.all(projectItems);
+  }
+
+  // 🚀 Load models one by one
+  for (const itemObj of modelList) {
+    g_projectItems.push(itemObj);
+    const latestVersion = itemObj.latestVersion;
+    const urn = window.btoa(latestVersion.id).replace(/=/g, "");
+    console.log("Item URN", urn);
+
+    await new Promise((resolve, reject) => {
       Autodesk.Viewing.Document.load(
         `urn:${urn}`,
-        onDocumentLoadSuccess,
-        onDocumentLoadFailure
+        async (doc) => {
+          try {
+            await onDocumentLoadSuccess(doc);
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        },
+        (code, message) => {
+          onDocumentLoadFailure(code, message);
+          reject(message);
+        }
       );
     });
   }
+
+  console.log("✅ All models loaded:", modelsLoaded);
 }
 
+
 async function modelLoaded(evt) {
+  console.log("Model loaded event received");
   loadedModelCounter++;
   if (loadedModelCounter === modelCount) {
     if (viewer.model) {
@@ -785,6 +850,27 @@ async function modelLoaded(evt) {
       viewer.loadExtension("Autodesk.AEC.Minimap3DExtension").then(async () => {
         console.log("Minimap3DExtension Extension Loaded");
       });
+
+        if (hardAsset || functionalLocation) {
+
+          const checkModelsLoaded = async () => {
+            while (!viewer.impl.modelQueue().getModels().length) {
+              console.log("⏳ Waiting for models to load...");
+              await new Promise(r => setTimeout(r, 500));
+            }
+          };
+
+          await checkModelsLoaded(); // wait until all models are actually loaded
+
+          const ha = hardAsset?.trim?.() || null;
+          const fl = functionalLocation?.trim?.() || null;
+
+          if (ha || fl) {
+            await navigateHAFL(viewer, ha, fl);
+          } else {
+            console.log("No valid Hard Asset or Functional Location provided.");
+          }
+        }
 
       if (deviceType) {
         if (deviceType == "mobile") {
@@ -819,18 +905,9 @@ async function modelLoaded(evt) {
                 "toolbar-settingsTool"
               ]
             }
-
           ]);
-
-          }
-
+        }
       }
-
-
-
-
-
-
     }
   }
 }
@@ -1729,6 +1806,7 @@ export async function initiateCreateIssueV2(viewer, message, userGuid) {
           },
         },
       ],
+      token: localStorage.getItem("authTokenHemyIssue")
     };
 
     const response = await fetch(`/api/sqlite/pushpin`, {
@@ -1762,6 +1840,7 @@ export async function initiateCreateIssueV2(viewer, message, userGuid) {
   });
 }
 // #endregion
+
 
 // #region: Create Issue Mobile
 export async function initiateCreateIssue_Mobile(viewer, message, userGuid) {
@@ -1865,35 +1944,65 @@ export async function initiateCreateIssue_Mobile(viewer, message, userGuid) {
 // #region: highlight HA/FL
 export async function navigateHAFL(viewer, ha, fl) {
   const models = viewer.impl.modelQueue().getModels();
-  if (!models?.length) {
-    console.warn("No models loaded.");
-    return;
+  if (!models?.length || models.length < 2) {
+    console.warn("⚠️ Need at least 2 fully loaded models before proceeding.");
+    navigateHAFL(viewer, ha, fl);
   }
+
+  // Wait for fragment lists to be ready before searching
+  await Promise.all(models.map(async (model, index) => {
+    await new Promise((resolve) => {
+      const waitForFragments = () => {
+        const fragList = model.getFragmentList?.();
+        if (fragList && fragList.getCount() > 0) {
+          console.log(`✅ Model[${index}] fragment list ready (${fragList.getCount()} frags).`);
+          resolve();
+        } else {
+          console.log(`⏳ Waiting for Model[${index}] fragments...`);
+          setTimeout(waitForFragments, 300);
+        }
+      };
+      waitForFragments();
+    });
+  }));
 
   const searchTerms = [ha, fl].filter(Boolean);
   if (!searchTerms.length) {
-    console.warn("No valid Hard Asset or Functional Location provided.");
+    console.warn("⚠️ No valid Hard Asset or Functional Location provided.");
     return;
   }
 
-  console.log("Searching for:", searchTerms);
+  console.log("🔍 Searching for:", searchTerms);
 
-  for (const model of models) {
+  for (const [i, model] of models.entries()) {
     let modelDbIds = [];
+    const fragList = model.getFragmentList();
+    const instanceTree = model.getData().instanceTree;
 
     for (const term of searchTerms) {
       await new Promise((resolve) => {
         model.search(
           term,
-          (dbIDs) => {
+          async (dbIDs) => {
             if (dbIDs?.length) {
-              console.log(`Found ${dbIDs.length} in model for: ${term}`);
-              modelDbIds.push(...dbIDs);
+              console.log(`✅ Found ${dbIDs.length} in model[${i}] for: ${term}`);
+
+              for (const dbId of dbIDs) {
+                await new Promise((resProp) => {
+                  model.getProperties(dbId, (props) => {
+                    if (props?.name) modelDbIds.push(dbId);
+                    else console.warn(`⚠️ dbId ${dbId} has no name property.`);
+                    resProp();
+                  });
+                });
+              }
 
               const color = new THREE.Vector4(0, 1, 0, 1);
               dbIDs.forEach(id => viewer.setThemingColor(id, color, model));
               viewer.setSelectionColor(new THREE.Color(0, 1, 0));
               viewer.select(dbIDs, model);
+            } else {
+              console.warn(`⚠️ No matches for ${term} in model[${i}]`);
             }
             resolve();
           },
@@ -1905,106 +2014,87 @@ export async function navigateHAFL(viewer, ha, fl) {
       });
     }
 
-    if (modelDbIds.length > 0) {
-      const uniqueIds = [...new Set(modelDbIds)];
-      console.log(`Model isolate/focus for ${uniqueIds.length} dbIDs`);
-      console.log("Unique IDs:", uniqueIds);
+    if (modelDbIds.length === 0) continue;
 
-      const box = new THREE.Box3();
-      const fragList = model.getFragmentList();
-      const instanceTree = model.getData().instanceTree;
+    const uniqueIds = [...new Set(modelDbIds)];
+    console.log(`✅ Model[${i}] isolate/focus for ${uniqueIds.length} dbIDs`, uniqueIds);
 
-      for (const id of uniqueIds) {
-        const fragIds = [];
-        instanceTree.enumNodeFragments(id, fragId => fragIds.push(fragId));
+    const box = new THREE.Box3();
 
-        if (fragIds.length === 0) {
-          console.warn(`⚠️ No fragments found for dbId ${id}`);
-          continue;
-        }
+    for (const id of uniqueIds) {
+      const fragIds = [];
+      instanceTree.enumNodeFragments(id, fragId => fragIds.push(fragId));
 
-        fragIds.forEach(fragId => {
-          const fragBox = new THREE.Box3();
-          fragList.getWorldBounds(fragId, fragBox);
-          if (!fragBox.isEmpty()) {
-            box.union(fragBox);
-          }
-        });
+      if (fragIds.length === 0) {
+        console.warn(`⚠️ No fragments found for dbId ${id} in model[${i}]`);
+        continue;
       }
 
-      if (box.isEmpty()) {
-        console.warn("⚠️ No valid bounding box found, using fitToView.");
-        viewer.fitToView(uniqueIds, model);
-        return;
-      }
-
-      console.log("✅ Final merged box:", box);
-
-
-
-      const targetCenter = box.getCenter(new THREE.Vector3());
-      const size = box.getSize(new THREE.Vector3());
-      const expandFactor = 1.5;
-      box.expandByVector(size.clone().multiplyScalar(expandFactor));
-
-      const nav = viewer.navigation;
-      const camera = nav.getCamera();
-      if (!camera.isPerspective) nav.toPerspective();
-
-      const radius = size.length() * 1.5;
-      const directions = [];
-      const numCandidates = 16;
-
-      for (let i = 0; i < numCandidates; i++) {
-        const angle = (i / numCandidates) * Math.PI * 2;
-        directions.push(
-          new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0.2).normalize()
-        );
-      }
-
-      let bestEye = null;
-      let bestScore = -Infinity;
-
-      for (const dir of directions) {
-        const eye = targetCenter.clone().add(dir.clone().multiplyScalar(radius));
-        const raycaster = new THREE.Raycaster(eye, targetCenter.clone().sub(eye).normalize());
-        const hits = raycaster.intersectObjects(viewer.impl.scene.children, true);
-        const score = -hits.length;
-        if (score > bestScore) {
-          bestScore = score;
-          bestEye = eye;
-        }
-      }
-
-      // if (!bestEye) bestEye = targetCenter.clone().add(new THREE.Vector3(radius, radius, radius).normalize().multiplyScalar(radius));
-
-      // const currentPos = viewer.navigation.getPosition().clone();
-      // const currentTarget = viewer.navigation.getTarget().clone();
-      // const steps = 30;
-      // let t = 0;
-      // const animate = () => {
-      //   t += 1 / steps;
-      //   if (t > 1) t = 1;
-
-      //   const newPos = currentPos.clone().lerp(bestEye, t);
-      //   const newTarget = currentTarget.clone().lerp(targetCenter, t);
-
-      //   viewer.navigation.setView(newPos, newTarget);
-
-      //   if (t < 1) requestAnimationFrame(animate);
-      // };
-      // animate();
-
-      // console.log("✅ Best-view computed eye:", bestEye);
-
-      const up = new THREE.Vector3(0, 0, 1); // Z-up, not Y-up
-      viewer.navigation.setView(bestEye, targetCenter);
-      viewer.navigation.setWorldUpVector(up);
-      viewer.impl.sceneUpdated(true);
-
+      fragIds.forEach(fragId => {
+        const fragBox = new THREE.Box3();
+        fragList.getWorldBounds(fragId, fragBox);
+        if (!fragBox.isEmpty()) box.union(fragBox);
+      });
     }
+
+    if (box.isEmpty()) {
+      console.warn("⚠️ No valid bounding box found, using fitToView.");
+      viewer.fitToView(uniqueIds, model);
+      continue;
+    }
+
+    console.log("✅ Final merged box:", box);
+
+    const targetCenter = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const expandFactor = 1.5;
+    box.expandByVector(size.clone().multiplyScalar(expandFactor));
+
+    const nav = viewer.navigation;
+    const camera = nav.getCamera();
+    if (!camera.isPerspective) nav.toPerspective();
+
+    const radius = size.length() * 1.5;
+    const directions = [];
+    const numCandidates = 16;
+
+    for (let j = 0; j < numCandidates; j++) {
+      const angle = (j / numCandidates) * Math.PI * 2;
+      directions.push(
+        new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0.2).normalize()
+      );
+    }
+
+    let bestEye = null;
+    let bestScore = -Infinity;
+
+    for (const dir of directions) {
+      const eye = targetCenter.clone().add(dir.clone().multiplyScalar(radius));
+      const raycaster = new THREE.Raycaster(eye, targetCenter.clone().sub(eye).normalize());
+      const hits = raycaster.intersectObjects(viewer.impl.scene.children, true);
+      const score = -hits.length;
+      if (score > bestScore) {
+        bestScore = score;
+        bestEye = eye;
+      }
+    }
+    
+    // viewer.navigation.setWorldUpVector(new THREE.Vector3(0, 0, 1));
+    viewer.navigation.setView(bestEye, targetCenter);
+    viewer.navigation.orientCameraUp();
+    viewer.impl.sceneUpdated(true);
+
+    setTimeout(() => {
+      console.log("🔁 Re-applying selection and theming after camera settle");
+      viewer.clearSelection();
+      viewer.select(uniqueIds, model);
+      uniqueIds.forEach(id => {
+        viewer.setThemingColor(id, new THREE.Vector4(0, 1, 0, 1), model);
+      });
+    }, 500);
   }
 }
+
 
 
 
@@ -2012,38 +2102,20 @@ export async function navigateHAFL(viewer, ha, fl) {
 // #endregion
 
 
-async function getAccurateBoundingBox(viewer, model, dbId) {
-  const fragList = model.getFragmentList();
-  const tree = model.getData().instanceTree;
-  const box = new THREE.Box3();
-
-  // collect fragment IDs
+function getFirstFragmentDescendants(model, dbId) {
+  const it = model.getData().instanceTree;
   const fragIds = [];
-  tree.enumNodeFragments(dbId, fragId => fragIds.push(fragId));
+  it.enumNodeFragments(dbId, fragId => fragIds.push(fragId));
 
-  fragIds.forEach(fragId => {
-    const fragProxy = viewer.impl.getFragmentProxy(model, fragId);
-    const renderProxy = viewer.impl.getRenderProxy(model, fragId);
+  if (fragIds.length > 0) return fragIds;
 
-    if (!renderProxy?.geometry) return;
+  // No fragments, check children
+  const children = [];
+  it.enumNodeChildren(dbId, childId => children.push(childId));
+  for (const childId of children) {
+    const result = getFirstFragmentDescendants(model, childId);
+    if (result.length > 0) return result;
+  }
 
-    fragProxy.updateAnimTransform();
-    const matrix = new THREE.Matrix4();
-    fragProxy.getWorldMatrix(matrix);
-
-    const geom = renderProxy.geometry;
-    const posAttr = geom.attributes?.position;
-    if (!posAttr) return;
-
-    const positions = posAttr.array;
-    const vertex = new THREE.Vector3();
-
-    for (let i = 0; i < positions.length; i += 3) {
-      vertex.set(positions[i], positions[i + 1], positions[i + 2]);
-      vertex.applyMatrix4(matrix);
-      box.expandByPoint(vertex);
-    }
-  });
-
-  return box.isEmpty() ? null : box;
+  return [];
 }

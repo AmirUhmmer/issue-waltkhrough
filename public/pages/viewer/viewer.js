@@ -99,8 +99,8 @@ async function renderProjectItems(containerId) {
 function setupSocket(userGuid, viewer) {
   const create_socket = () => {
     const socket = new WebSocket(
-      `wss://staging-issue-reporting-bxcubjc8gfemgkay.northeurope-01.azurewebsites.net/ws/${userGuid}` // <--staging
-      // `wss://autodesk-issues-reporting.azurewebsites.net/ws/${userGuid}`
+      // `wss://staging-issue-reporting-bxcubjc8gfemgkay.northeurope-01.azurewebsites.net/ws/${userGuid}` // <--staging
+      `wss://autodesk-issues-reporting.azurewebsites.net/ws/${userGuid}`
     );
     socket.onmessage = async (event) => {
       const message = JSON.parse(event.data);
@@ -233,27 +233,6 @@ async function main() {
         setupSocket(userGuid, viewer);
       }
     }
-
-  if (hardAsset || functionalLocation) {
-
-    const checkModelsLoaded = async () => {
-      while (!viewer.impl.modelQueue().getModels().length) {
-        console.log("⏳ Waiting for models to load...");
-        await new Promise(r => setTimeout(r, 500));
-      }
-    };
-
-    await checkModelsLoaded(); // wait until all models are actually loaded
-
-    const ha = hardAsset?.trim?.() || null;
-    const fl = functionalLocation?.trim?.() || null;
-
-    if (ha || fl) {
-      await navigateHAFL(viewer, ha, fl);
-    } else {
-      console.log("No valid Hard Asset or Functional Location provided.");
-    }
-  }
 
   } catch (err) {
     alert("error displaying application");
