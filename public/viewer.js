@@ -18,6 +18,7 @@ var srcWin = null;
 var srcOrigin = "";
 var src = null;
 var oneIssueDetails = null;
+var modelsLoaded = 0;
 
 const params = new URLSearchParams(window.location.search);
 const userGuid = params.get("userGuid");
@@ -64,8 +65,8 @@ const modelSetViews = [
 
   {
     containerId: "552de2d1-bc00-41a4-8d90-ec063d64a4c6",
-    modelSetId: "15054182-e125-4c29-9ec2-b106cafaf660",
-    modelSetViewId: "b86d148b-2001-4874-89d4-c8e2e1b8c645",
+    // modelSetId: "15054182-e125-4c29-9ec2-b106cafaf660",
+    // modelSetViewId: "b86d148b-2001-4874-89d4-c8e2e1b8c645",
     definition: [
       {
         lineageUrn: "urn:adsk.wipemea:dm.lineage:UwhmTaE5RQ21--nmCQd2pA",
@@ -642,200 +643,241 @@ export async function loadModelAndIssues(viewer, item, projectId) {
 
 // ! load models
 // #region load models
+async function getProjectModels(containerId) {
+
+  function onDocumentLoadSuccess(doc) {
+    const geometry = doc.getRoot().getDefaultGeometry();
+    // geometry?.globalOffset || 
+    const offset = geometry?.globalOffset || { x: 0, y: 0, z: 0 };
+
+    const loadOptions = {
+      applyrefPoint: true, // only for first model
+      globalOffset: offset,
+      keepCurrentModels: true,
+      // placementTransform: new THREE.Matrix4().setPosition(offset),
+    };
+
+    viewer.loadDocumentNode(doc, geometry, loadOptions);
+
+    // viewer.addEventListener(
+    //   Autodesk.Viewing.GEOMETRY_LOADED_EVENT,
+    //   modelLoaded
+    // );
+
+    viewer.addEventListener(Autodesk.Viewing.GEOMETRY_LOADED_EVENT, (event) => {
+      const model = event.model;
+
+      // 🔧 Fix for Level Extension mismatch
+      if (viewer.loadedExtensions["Autodesk.AEC.LevelsExtension"]) {
+        const levelsExt = viewer.loadedExtensions["Autodesk.AEC.LevelsExtension"];
+        if (levelsExt && typeof levelsExt.onModelLoaded === "function") {
+          levelsExt.onModelLoaded(model);
+        }
+      }
+
+      modelLoaded(event);
+    });
+
+  }
+  
+  function onDocumentLoadFailure(code, message) {
+    alert("Could not load model. See console for more details.");
+    console.error(message);
+  }
+
+  const projectItems = await getOneProject(containerId);
+  console.log("PRoject Items", projectItems);
+  modelCount = projectItems.length;
+  const modelSet = modelSetViews.filter(
+    (model) => model.containerId === containerId
+  );
+  if (modelSet.length > 0) {
+    modelCount = modelSet[0].definition.length;
+    const projectItemResults = await Promise.all(projectItems);
+    console.log("Project Item Results:", projectItemResults);
+
+    modelSet[0].definition.forEach(async (model, index) => {
+      let objItem = projectItemResults.filter(
+        (item) => item.id === model.lineageUrn
+      );
+
+      console.log("Object:", objItem);
+      console.log("Model Lineage URN:", modelSet[0]);
+      console.log("Loaded Model Counter:", modelsLoaded);
+      console.log("Model container:", modelSet[0].containerId);
+      console.log("Model urn:", modelSet[0].definition[modelsLoaded].lineageUrn);
+
+      // !! Fix if the item is not found. Get the latest version URN from versions 
+      // * SAMPLE HG62
+      let base64Urn = null;
+
+      if(!objItem.length) {
+        console.warn("No matching item found for lineageUrn:", model.lineageUrn);
+        const accessToken = localStorage.getItem('authTokenHemyIssue'); // Retrieve the access token
+        const versionsUrl = `https://developer.api.autodesk.com/data/v1/projects/b.${modelSet[0].containerId}/items/${modelSet[0].definition[modelsLoaded].lineageUrn}/versions`;
+        const response = await fetch(versionsUrl, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+            },
+        });
+        const versionsData = await response.json();
+        console.log('Latest Version URN:', versionsData);
+        if (versionsData.data && versionsData.data.length > 0) {
+            const latestVersion = versionsData.data[0];  // Assuming the first item is the latest
+            let latestVersionUrn = latestVersion.id;  // This will be the URN for the latest version
+            console.log('Latest Version URN:', latestVersionUrn);
+            base64Urn = btoa(latestVersionUrn);  // This encodes the URN to base64
+            // console.log('Base64 URN:', base64Urn);
+        } else {
+            console.error('No versions found for the file.');
+        }
+      }
+
+      if (objItem.length && objItem[0].latestVersion) {
+        g_projectItems.push(objItem[0]);
+        const urn = window.btoa(objItem[0].latestVersion.id).replace(/=/g, "");
+        console.log("Item URN", urn);
+        Autodesk.Viewing.Document.load(
+          `urn:${urn}`,
+          onDocumentLoadSuccess,
+          onDocumentLoadFailure
+        );
+      } else if (base64Urn) {
+        console.log("Using fallback URN", base64Urn);
+        Autodesk.Viewing.Document.load(`urn:${base64Urn}`, onDocumentLoadSuccess, onDocumentLoadFailure);
+      } else {
+        alert("There's a problem on the model.Please contact admin.");
+      }
+      modelsLoaded++;
+    });
+  } else {
+    projectItems.forEach(async (item, index) => {
+      const itemObj = await item;
+      const latestVersion = itemObj.latestVersion;
+      // issueFilter = {
+      //   "filter[linkedDocumentUrn]": itemObj.id,
+      // };
+      // allIssues = await getAllIssues(projectId, issueFilter);
+      //      console.log("ItemObj", itemObj);
+      g_projectItems.push(itemObj);
+      const urn = window.btoa(latestVersion.id).replace(/=/g, "");
+      console.log("Item URN", urn);
+      Autodesk.Viewing.Document.load(
+        `urn:${urn}`,
+        onDocumentLoadSuccess,
+        onDocumentLoadFailure
+      );
+    });
+  }
+}
+
+
+// !!!! test fix 2
 // async function getProjectModels(containerId) {
 //   let offset = null;
-//   let modelsLoaded = 0;
-//   function onDocumentLoadSuccess(doc) {
-//     const geometry = doc.getRoot().getDefaultGeometry();
-//     // geometry?.globalOffset || 
-//     // const offset = geometry?.globalOffset || { x: 0, y: 0, z: 0 };
-
-//     // const loadOptions = {
-//     //   globalOffset: offset,
-//     //   keepCurrentModels: true,
-//     //   placementTransform: new THREE.Matrix4().setPosition(offset),
-//     // };
-//      console.log("Models loaded count:", modelsLoaded);
-
-//     const loadOptions = {
-//       keepCurrentModels: true,
-//       applyRefPoint: true,
-//       skipHiddenFragments: true,
-//       ...(modelsLoaded > 0 && { globalOffset: offset })
-//     };
-
-//     const modelOrPromise = viewer.loadDocumentNode(doc, geometry, loadOptions);
-
-//     Promise.resolve(modelOrPromise).then((model) => {
-//       modelsLoaded++;
-
-//       if (modelsLoaded === 1) {
-//         offset = model?.getData()?.globalOffset || { x: 0, y: 0, z: 0 };
-//         console.log("✅ Saved offset from first model:", offset);
-//       }
-
-//       console.log(`✅ Model #${modelsLoaded} fully loaded`);
-//     }).catch((err) => {
-//       console.error("Error loading model:", err);
-//     });
-
-//     viewer.addEventListener(
-//       Autodesk.Viewing.GEOMETRY_LOADED_EVENT,
-//       modelLoaded
-//     );
-//   }
+//   
 
 //   function onDocumentLoadFailure(code, message) {
 //     alert("Could not load model. See console for more details.");
 //     console.error(message);
 //   }
 
+//   function onDocumentLoadSuccess(doc) {
+//     return new Promise((resolve, reject) => {
+//       const geometry = doc.getRoot().getDefaultGeometry();
+//       const loadOptions = {
+//         keepCurrentModels: true,
+//         applyRefPoint: true,
+//         skipHiddenFragments: true,
+//         // globalOffset: { x: 0, y: 0, z: 0 }
+//         ...(modelsLoaded > 0 && { globalOffset: offset }),
+//       };
+//       // const loadOptions = {
+//       //   keepCurrentModels: true,
+//       //   applyRefPoint: modelsLoaded === 0, // only for first model
+//       //   globalOffset: modelsLoaded === 0 ? undefined : offset,
+//       //   skipHiddenFragments: true,
+//       // };
+
+
+//       // ✅ Keep this listener
+//       viewer.addEventListener(
+//         Autodesk.Viewing.GEOMETRY_LOADED_EVENT,
+//         modelLoaded
+//       );
+
+//       const modelOrPromise = viewer.loadDocumentNode(doc, geometry, loadOptions);
+
+//       // await modelLoaded();
+
+//       Promise.resolve(modelOrPromise)
+//         .then((model) => {
+//           modelsLoaded++;
+//           if (modelsLoaded === 1) {
+//             offset = model?.getData()?.globalOffset || { x: 0, y: 0, z: 0 };
+//             console.log("✅ Saved offset from first model:", offset);
+//           }
+
+//           console.log(`✅ Model #${modelsLoaded} fully loaded`);
+//           resolve();
+//         })
+//         .catch((err) => {
+//           console.error("Error loading model:", err);
+//           reject(err);
+//         });
+//     });
+//   }
+
 //   const projectItems = await getOneProject(containerId);
-//   console.log("PRoject Items", projectItems);
+//   console.log("Project Items", projectItems);
+//   let modelList = [];
 //   modelCount = projectItems.length;
+
 //   const modelSet = modelSetViews.filter(
 //     (model) => model.containerId === containerId
 //   );
-//   // ? MODEL SET IN ACC??
+
 //   if (modelSet.length > 0) {
-//     modelCount = modelSet[0].definition.length;
 //     const projectItemResults = await Promise.all(projectItems);
-//     modelSet[0].definition.forEach(async (model, index) => {
-//       const objItem = projectItemResults.filter(
+//     modelList = modelSet[0].definition.map((model) => {
+//       const objItem = projectItemResults.find(
 //         (item) => item.id === model.lineageUrn
 //       );
-//       //    console.log(objItem);
-
-//       if (objItem[0].latestVersion) {
-//         g_projectItems.push(objItem[0]);
-//         const urn = window.btoa(objItem[0].latestVersion.id).replace(/=/g, "");
-//         console.log("Item URN", urn);
-//         Autodesk.Viewing.Document.load(
-//           `urn:${urn}`,
-//           onDocumentLoadSuccess,
-//           onDocumentLoadFailure
-//         );
-
-//       }
-//     });
+//       return objItem?.latestVersion ? objItem : null;
+//     }).filter(Boolean);
 //   } else {
-//     projectItems.forEach(async (item, index) => {
-//       const itemObj = await item;
-//       const latestVersion = itemObj.latestVersion;
-//       // issueFilter = {
-//       //   "filter[linkedDocumentUrn]": itemObj.id,
-//       // };
-//       // allIssues = await getAllIssues(projectId, issueFilter);
-//       //      console.log("ItemObj", itemObj);
-//       g_projectItems.push(itemObj);
-//       const urn = window.btoa(latestVersion.id).replace(/=/g, "");
-//       console.log("Item URN", urn);
+//     modelList = await Promise.all(projectItems);
+//   }
+
+//   // 🚀 Load models one by one
+//   for (const itemObj of modelList) {
+//     g_projectItems.push(itemObj);
+//     const latestVersion = itemObj.latestVersion;
+//     const urn = window.btoa(latestVersion.id).replace(/=/g, "");
+//     console.log("Item URN", urn);
+
+//     await new Promise((resolve, reject) => {
 //       Autodesk.Viewing.Document.load(
 //         `urn:${urn}`,
-//         onDocumentLoadSuccess,
-//         onDocumentLoadFailure
+//         async (doc) => {
+//           try {
+//             await onDocumentLoadSuccess(doc);
+//             resolve();
+//           } catch (err) {
+//             reject(err);
+//           }
+//         },
+//         (code, message) => {
+//           onDocumentLoadFailure(code, message);
+//           reject(message);
+//         }
 //       );
 //     });
 //   }
+
+//   console.log("✅ All models loaded:", modelsLoaded);
 // }
-
-
-async function getProjectModels(containerId) {
-  let offset = null;
-  let modelsLoaded = 0;
-
-  function onDocumentLoadFailure(code, message) {
-    alert("Could not load model. See console for more details.");
-    console.error(message);
-  }
-
-  function onDocumentLoadSuccess(doc) {
-    return new Promise((resolve, reject) => {
-      const geometry = doc.getRoot().getDefaultGeometry();
-      const loadOptions = {
-        keepCurrentModels: true,
-        applyRefPoint: true,
-        skipHiddenFragments: true,
-        ...(modelsLoaded > 0 && { globalOffset: offset }),
-      };
-
-      // ✅ Keep this listener
-      viewer.addEventListener(
-        Autodesk.Viewing.GEOMETRY_LOADED_EVENT,
-        modelLoaded
-      );
-
-      const modelOrPromise = viewer.loadDocumentNode(doc, geometry, loadOptions);
-
-      // await modelLoaded();
-
-      Promise.resolve(modelOrPromise)
-        .then((model) => {
-          modelsLoaded++;
-          if (modelsLoaded === 1) {
-            offset = model?.getData()?.globalOffset || { x: 0, y: 0, z: 0 };
-            console.log("✅ Saved offset from first model:", offset);
-          }
-
-          console.log(`✅ Model #${modelsLoaded} fully loaded`);
-          resolve();
-        })
-        .catch((err) => {
-          console.error("Error loading model:", err);
-          reject(err);
-        });
-    });
-  }
-
-  const projectItems = await getOneProject(containerId);
-  console.log("Project Items", projectItems);
-  let modelList = [];
-  modelCount = projectItems.length;
-
-  const modelSet = modelSetViews.filter(
-    (model) => model.containerId === containerId
-  );
-
-  if (modelSet.length > 0) {
-    const projectItemResults = await Promise.all(projectItems);
-    modelList = modelSet[0].definition.map((model) => {
-      const objItem = projectItemResults.find(
-        (item) => item.id === model.lineageUrn
-      );
-      return objItem?.latestVersion ? objItem : null;
-    }).filter(Boolean);
-  } else {
-    modelList = await Promise.all(projectItems);
-  }
-
-  // 🚀 Load models one by one
-  for (const itemObj of modelList) {
-    g_projectItems.push(itemObj);
-    const latestVersion = itemObj.latestVersion;
-    const urn = window.btoa(latestVersion.id).replace(/=/g, "");
-    console.log("Item URN", urn);
-
-    await new Promise((resolve, reject) => {
-      Autodesk.Viewing.Document.load(
-        `urn:${urn}`,
-        async (doc) => {
-          try {
-            await onDocumentLoadSuccess(doc);
-            resolve();
-          } catch (err) {
-            reject(err);
-          }
-        },
-        (code, message) => {
-          onDocumentLoadFailure(code, message);
-          reject(message);
-        }
-      );
-    });
-  }
-
-  console.log("✅ All models loaded:", modelsLoaded);
-}
 
 
 async function modelLoaded(evt) {
@@ -1132,11 +1174,13 @@ export async function loadModelsandLoadOneIssue(
   if (modelSet.length > 0) {
     modelCount = modelSet[0].definition.length;
     const projectItemResults = await Promise.all(projectItems);
+    console.log("Project Item Results", projectItemResults);
+    console.log("Model Set", modelSet[0].definition);
     modelSet[0].definition.forEach(async (model, index) => {
       const objItem = projectItemResults.filter(
         (item) => item.id === model.lineageUrn
       );
-      //console.log(objItem);
+      console.log("Object", objItem);
       const urn = window.btoa(objItem[0].latestVersion.id).replace(/=/g, "");
       Autodesk.Viewing.Document.load(
         `urn:${urn}`,
@@ -1755,11 +1799,20 @@ export async function initiateCreateIssueV2(viewer, message, userGuid) {
     type: "issues",
   });
 
+  const model = viewer.model;
+  const offset = model?.getData()?.globalOffset || { x: 0, y: 0, z: 0 };
+
   const upsert_pushpin_details = async (pushpin_item) => {
     const div_loading = document.getElementById("div-loading");
     div_loading.classList.remove("d-none");
     const newIssue = pushpin_item.itemData;
     const metadata = await getMetadata(newIssue.seedURN);
+      // Fix pushpin position to world coordinates
+    const correctedPosition = {
+      x: newIssue.position.x + offset.x,
+      y: newIssue.position.y + offset.y,
+      z: newIssue.position.z + offset.z,
+    };
     const view = metadata.data.metadata[0];
     const item = g_projectItems.filter(
       (item) =>
@@ -1800,7 +1853,7 @@ export async function initiateCreateIssueV2(viewer, message, userGuid) {
               is3D: true,
               id: newIssue.objectData.viewableId,
             },
-            position: newIssue.position,
+            position: newIssue.position, // newIssue.position
             objectId: newIssue.objectId,
             viewerState: newIssue.viewerState,
           },
