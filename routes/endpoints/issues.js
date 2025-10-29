@@ -29,7 +29,7 @@ const { authRefreshMiddleware } = require("../services/oauth");
 const issues_services = require("../services/issues");
 const admin_services = require("../services/admin");
 const upload = multer({ dest: "./Image_Files/" });
-const { ACCESS_TOKEN } = process.env;
+const { ACCESS_TOKEN, APP_BASE_URL } = process.env;
 const localStorage = require("localStorage");
 const { stringify } = require("querystring");
 
@@ -763,5 +763,51 @@ function getOnePushpin(pushpinData) {
 
   return returnJson;
 }
+
+// #region GET Construction Projects
+router.get("/api/constructionProjects", async (req, res) => {
+  try {
+    // 1️⃣ Get token
+    const tokenRes = await fetch(`${APP_BASE_URL}/api/auth/twoLeggedToken`);
+    const tokenData = await tokenRes.json();
+    const access_token = tokenData.access_token;
+
+    // 2️⃣ Helper to fetch all pages
+    const allProjects = [];
+    let nextUrl = "https://developer.api.autodesk.com/construction/admin/v1/accounts/7a656dca-000a-494b-9333-d9012c464554/projects?filter[name]=Construction Project&filterTextMatch=contains";
+
+    while (nextUrl) {
+      const accRes = await fetch(nextUrl, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+          Region: "EMEA",
+          // "User-Id": "3a15881a-370e-4d72-80f7-8701c4b1806c"
+        },
+      });
+
+      const accData = await accRes.json();
+
+      // Push results
+      if (accData.results?.length) {
+        allProjects.push(...accData.results.map(p => ({
+          id: p.id,
+          name: p.name
+        })));
+      }
+
+      // Move to next page
+      nextUrl = accData.pagination?.nextUrl || null;
+    }
+
+    // 3️⃣ Return all results
+    res.json(allProjects);
+
+  } catch (err) {
+    console.error("Error fetching ACC projects:", err);
+    res.status(500).json({ error: "Failed to fetch projects" });
+  }
+});
+// #endregion
 
 module.exports = router;

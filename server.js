@@ -70,6 +70,17 @@ app.use(require('./routes/endpoints/sqlite.js'));
 app.use(createwssRoutes(clients));
 
 
+// --- Webhook route for Autodesk ACC issues ---
+app.post('/webhook/issues', (req, res) => {
+    console.log('🔔 New webhook event received from Autodesk:');
+    console.log(JSON.stringify(req.body, null, 2));
+
+    // Always send 200 OK fast so Autodesk knows we received it
+    res.status(200).send('OK');
+});
+
+
+
 //app.use(require('./routes/endpoints/sqlite.js'));
 
 server.listen(PORT, () => console.log(`Server listening on port ${PORT}...`));

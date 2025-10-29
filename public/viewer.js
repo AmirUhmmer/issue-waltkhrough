@@ -65,8 +65,8 @@ const modelSetViews = [
 
   {
     containerId: "552de2d1-bc00-41a4-8d90-ec063d64a4c6",
-    // modelSetId: "15054182-e125-4c29-9ec2-b106cafaf660",
-    // modelSetViewId: "b86d148b-2001-4874-89d4-c8e2e1b8c645",
+    modelSetId: "15054182-e125-4c29-9ec2-b106cafaf660",
+    modelSetViewId: "b86d148b-2001-4874-89d4-c8e2e1b8c645",
     definition: [
       {
         lineageUrn: "urn:adsk.wipemea:dm.lineage:UwhmTaE5RQ21--nmCQd2pA",
@@ -339,7 +339,7 @@ async function getAccessToken(callback) {
     // tokenExpiry = now + expires_in;
 
     console.log("token fetched, expires in", expiresAt, "seconds");
-    console.log("access_token:", authToken);
+    // console.log("access_token:", authToken);
     callback(authToken, expiresAt);
     console.log("token fetched");
   } catch (err) {
@@ -362,6 +362,12 @@ export function initViewer(container) {
       viewer = new Autodesk.Viewing.GuiViewer3D(container, config);
       viewer.start();
       viewer.setTheme("light-theme");
+      
+      viewer.setOptimizeNavigation(true)
+      viewer.setQualityLevel(false, false);
+      viewer.setGroundShadow(false);
+      viewer.setGroundReflection(false);
+      viewer.setProgressiveRendering(true);
 
       resolve(viewer);
     });
@@ -650,12 +656,14 @@ async function getProjectModels(containerId) {
     // geometry?.globalOffset || 
     const offset = geometry?.globalOffset || { x: 0, y: 0, z: 0 };
 
+    console.log("Model Global Offset:", offset);
+    
     const loadOptions = {
       applyrefPoint: true, // only for first model
       globalOffset: offset,
       keepCurrentModels: true,
-      // placementTransform: new THREE.Matrix4().setPosition(offset),
     };
+    // placementTransform: new THREE.Matrix4().setPosition(offset),
 
     viewer.loadDocumentNode(doc, geometry, loadOptions);
 
@@ -665,16 +673,6 @@ async function getProjectModels(containerId) {
     // );
 
     viewer.addEventListener(Autodesk.Viewing.GEOMETRY_LOADED_EVENT, (event) => {
-      const model = event.model;
-
-      // 🔧 Fix for Level Extension mismatch
-      if (viewer.loadedExtensions["Autodesk.AEC.LevelsExtension"]) {
-        const levelsExt = viewer.loadedExtensions["Autodesk.AEC.LevelsExtension"];
-        if (levelsExt && typeof levelsExt.onModelLoaded === "function") {
-          levelsExt.onModelLoaded(model);
-        }
-      }
-
       modelLoaded(event);
     });
 
@@ -880,15 +878,76 @@ async function getProjectModels(containerId) {
 // }
 
 
+
 async function modelLoaded(evt) {
   console.log("Model loaded event received");
   loadedModelCounter++;
   if (loadedModelCounter === modelCount) {
     if (viewer.model) {
-      viewer.loadExtension("Autodesk.AEC.LevelsExtension").then(async () => {
+      // await viewer.loadExtension("Autodesk.AEC.LevelsExtension").then(async (levelsExt) => {
+      //   console.log("Levels Extension Loaded");
+
+      //    // Wait a bit for geometry + internal state to stabilize
+      //   await new Promise((res) => setTimeout(res, 1000));
+
+      //   await loadIssuePushpins();
+      // });
+
+      await viewer.loadExtension("Autodesk.AEC.LevelsExtension").then(async (levelsExt) => {
         console.log("Levels Extension Loaded");
+
+        // Wait until geometry and object tree are ready
+        if (viewer.model?.getData()?.instanceTree) {
+          console.log("✅ Object tree already available — loading pushpins now");
+        } else {
+          console.log("⏳ Waiting for object tree to be created...");
+          await new Promise((resolve) => {
+            const onTreeReady = () => {
+              console.log("✅ Object tree ready, loading pushpins now");
+              viewer.removeEventListener(Autodesk.Viewing.OBJECT_TREE_CREATED_EVENT, onTreeReady);
+              resolve();
+            };
+            viewer.addEventListener(Autodesk.Viewing.OBJECT_TREE_CREATED_EVENT, onTreeReady);
+          });
+        }
+
+        // ✅ Force the viewer to start rendering before loading pushpins
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+
         await loadIssuePushpins();
+
+        // ✅ Force a redraw — PushPin sometimes misses initial invalidate()
+        viewer.impl.invalidate(true, true, true);
+        console.log("🔁 Viewer invalidated after pushpin load");
       });
+
+
+      // await recenterModelsDynamically(viewer);
+
+      //  viewer.loadExtension("Autodesk.AEC.LevelsExtension").then(function (levelsExt) {
+      //     if (levelsExt && levelsExt.floorSelector) {
+      //       const floorData = levelsExt.floorSelector;
+
+      //       setTimeout(() => {
+      //         const levels = floorData._floors;
+      //         console.log("Floor Array after delay:", levels);
+
+      //         if (levels && levels.length > 0) {
+      //           levels.forEach((floor, index) => {
+      //             // console.log(`Floor ${index}:`, floor);
+      //           });
+      //         } else {
+      //           console.error("Floors array is still empty.");
+      //         }
+              
+      //       }, 1000); // Wait for 1 second before checking
+      //     } else {
+      //       console.error("Levels Extension or floorSelector is not available.");
+      //     }
+      //   });
+
+      
+
       viewer.loadExtension("Autodesk.AEC.Minimap3DExtension").then(async () => {
         console.log("Minimap3DExtension Extension Loaded");
       });
@@ -1342,7 +1401,10 @@ async function loadIssuePushpins(filter = {}) {
 
     }
   });
-  pushpinExt.loadItemsV2(pushpin);
+  await pushpinExt.loadItemsV2(pushpin);
+  await new Promise(res => setTimeout(res, 500)); // small delay for render
+  pushpinExt.showAll();
+  viewer.impl.invalidate(true, true, true);
   console.log("Pushpin Manager", pushpin);
 }
 // #endregion
@@ -1557,15 +1619,19 @@ async function loadIssuesList(containerId) {
       },
       pending: {
         title: "Pending",
-        color: "blue",
+        color: "#001ee0ff",
       },
       in_review: {
         title: "In Review",
-        color: "purple",
+        color: "#8300e0ff",
       },
       closed: {
         title: "Closed",
-        color: "gray",
+        color: "#39393bff",
+      },
+      completed: {
+        title: "Closed",
+        color: "#39393bff",
       },
     };
     // console.log("TEST:",hemyLinkAttribute);

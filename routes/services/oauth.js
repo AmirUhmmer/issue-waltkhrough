@@ -10,7 +10,16 @@ const axios = require("axios");
 const sdkManager = SdkManagerBuilder.create().build();
 const authenticationClient = new AuthenticationClient(sdkManager);
 const dataManagementClient = new DataManagementClient(sdkManager);
-const { ACCESS_TOKEN, EXPIRES_IN, REFRESH_TOKEN, APP_BASE_URL } = process.env;
+const { ACCESS_TOKEN, 
+        EXPIRES_IN, 
+        REFRESH_TOKEN, 
+        APP_BASE_URL, 
+        SSA_CLIENT_ID, 
+        SSA_SECRET_ID,
+        SSA_SERVICE_ACCOUNT_ID,
+        SSA_KEY_ID,
+        SSA_PRIVATE_KEY
+       } = process.env;
 const {
   APS_CLIENT_ID,
   APS_CLIENT_SECRET,
