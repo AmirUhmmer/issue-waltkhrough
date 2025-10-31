@@ -75,6 +75,9 @@ app.post('/webhook/issues', (req, res) => {
     console.log('🔔 New webhook event received from Autodesk:');
     console.log(JSON.stringify(req.body, null, 2));
 
+    // Send to all connected clients
+    sockets.forEach(ws => ws.send(JSON.stringify(req.body)));
+
     // Always send 200 OK fast so Autodesk knows we received it
     res.status(200).send('OK');
 });
