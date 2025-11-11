@@ -99,8 +99,8 @@ async function renderProjectItems(containerId) {
 function setupSocket(userGuid, viewer) {
   const create_socket = () => {
     const socket = new WebSocket(
-      `wss://staging-issue-reporting-bxcubjc8gfemgkay.northeurope-01.azurewebsites.net/ws/${userGuid}` // <--staging
-      // `wss://autodesk-issues-reporting.azurewebsites.net/ws/${userGuid}`
+      // `wss://staging-issue-reporting-bxcubjc8gfemgkay.northeurope-01.azurewebsites.net/ws/${userGuid}` // <--staging
+      `wss://autodesk-issues-reporting.azurewebsites.net/ws/${userGuid}`
     );
     socket.onmessage = async (event) => {
       const message = JSON.parse(event.data);

@@ -176,10 +176,10 @@ const modelSetViews = [
         lineageUrn: "urn:adsk.wipemea:dm.lineage:VLzD-rrOS9SQvV6rnJT7LA",
         viewableName: "SMY-SEMY-ARST-JV3_OCAB",
       },
-      {
-        lineageUrn: "urn:adsk.wipemea:dm.lineage:Ty5wLZ92TqCHkIn80Mmipg",
-        viewableName: "JV3-SEMY-P41-ASBUILT-COMMON AREAS",
-      },
+      // {
+      //   lineageUrn: "urn:adsk.wipemea:dm.lineage:Ty5wLZ92TqCHkIn80Mmipg",
+      //   viewableName: "JV3-SEMY-P41-ASBUILT-COMMON AREAS",
+      // },
       {
         lineageUrn: "urn:adsk.wipemea:dm.lineage:U9tz-MHvQfS2Hg9gRITkdA",
         viewableName: "JV3-SEMY-P41-ASBUILT-OCAB",
@@ -1050,6 +1050,7 @@ export async function loadModelsandCreateIssue(viewer, projectId, srcParam) {
   );
 
   if (modelSet.length > 0) {
+    // console.log("Model Set Found:", modelSet);
     modelCount = modelSet[0].definition.length;
     const projectItemResults = await Promise.all(projectItems);
     modelSet[0].definition.forEach(async (model, index) => {
@@ -1104,6 +1105,7 @@ export async function loadModelsandLoadOneIssue(
     async (evt) => {
       loadedModelCounter++;
       console.log("Loaded Geometry", loadedModelCounter);
+      // console.log("Model Count", modelCount);
       if (loadedModelCounter === modelCount) {
         await viewer
           .loadExtension("Autodesk.AEC.LevelsExtension")
@@ -1240,6 +1242,7 @@ export async function loadModelsandLoadOneIssue(
         (item) => item.id === model.lineageUrn
       );
       console.log("Object", objItem);
+      // if (objItem == null || !objItem.length) return;
       const urn = window.btoa(objItem[0].latestVersion.id).replace(/=/g, "");
       Autodesk.Viewing.Document.load(
         `urn:${urn}`,
