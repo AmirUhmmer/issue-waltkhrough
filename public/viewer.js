@@ -921,6 +921,160 @@ async function modelLoaded(evt) {
         console.log("🔁 Viewer invalidated after pushpin load");
       });
 
+     // Multiple Hard Assets
+
+      let multiSelectMode = false;
+let selectedAssets = new Set();
+
+// Buttons (ensure these exist in your HTML)
+const btn = document.getElementById("multiSelectBtn");
+const clearBtn = document.getElementById("clearSelectionBtn");
+
+// Update selection count on button
+function updateButtonCount() {
+    if (!btn) return;
+    btn.textContent = `Multi-Select (${selectedAssets.size})`;
+}
+
+// Highlight a dbId safely
+function highlight(dbId) {
+    if (!dbId || !viewer.model) return;
+    const fragList = viewer.model.getFragmentList();
+    const fragCount = fragList.getCount();
+
+    for (let fragId = 0; fragId < fragCount; fragId++) {
+        const dbIds = [];
+        fragList.getDbIds(fragId, dbIds);
+        if (dbIds.includes(dbId)) {
+            viewer.impl.setThemingColor(fragId, new THREE.Vector4(0,1,0,1), viewer.model);
+        }
+    }
+    viewer.impl.invalidate(true,true,true);
+}
+
+// Remove highlight
+function removeHighlight(dbId) {
+    if (!dbId || !viewer.model) return;
+    const fragList = viewer.model.getFragmentList();
+    const fragCount = fragList.getCount();
+
+    for (let fragId = 0; fragId < fragCount; fragId++) {
+        const dbIds = [];
+        fragList.getDbIds(fragId, dbIds);
+        if (dbIds.includes(dbId)) {
+            viewer.impl.setThemingColor(fragId, null, viewer.model);
+        }
+    }
+    viewer.impl.invalidate(true,true,true);
+}
+
+// Apply all highlights
+function applyHighlights() {
+    selectedAssets.forEach(dbId => highlight(dbId));
+}
+
+// Multi-Select Button
+btn.addEventListener("click", () => {
+    multiSelectMode = !multiSelectMode;
+
+    if (!multiSelectMode) {
+        // Clear selection when turning multi-select off
+        selectedAssets.clear();
+        viewer.clearSelection();
+        viewer.clearThemingColors();
+    }
+
+    btn.classList.toggle("active", multiSelectMode);
+    updateButtonCount();
+});
+
+// Clear Selection Button
+clearBtn.addEventListener("click", () => {
+    selectedAssets.clear();
+    viewer.clearSelection();
+    viewer.clearThemingColors();
+    updateButtonCount();
+});
+
+// Pointer handler: tap / click
+function attachPointerHandler() {
+    viewer.impl.canvas.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        const rect = viewer.impl.canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        const hit = viewer.impl.hitTest(x, y, true);
+        if (!hit || !hit.dbId) return;
+        const dbId = hit.dbId;
+
+        if (!multiSelectMode) {
+            // Single-select mode: clear previous selection
+            selectedAssets.clear();
+            selectedAssets.add(dbId);
+        } else {
+            // Multi-select toggle
+            if (selectedAssets.has(dbId)) selectedAssets.delete(dbId);
+            else selectedAssets.add(dbId);
+        }
+
+        // Clear previous theming and reapply
+        viewer.clearThemingColors();
+        applyHighlights();
+        viewer.select([...selectedAssets]);
+        updateButtonCount();
+    });
+}
+
+// Call this **after your model loads**
+attachPointerHandler();
+updateButtonCount();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
       // await recenterModelsDynamically(viewer);
 
