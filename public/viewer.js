@@ -29,22 +29,42 @@ const functionalLocation = params.get("floc");
 
 
 const modelSetViews = [
+  // {
+  //   containerId: "bd676732-fbaf-4f1e-bd70-35268dbb216c",
+  //   definition: [
+  //     {
+  //       lineageUrn: "urn:adsk.wipemea:dm.lineage:4b04FjlWQ1a2OzXiLry9qQ",
+  //       viewableName: "DB8-SEMY-ARST-ASBUILT",
+  //     },
+  //     {
+  //       lineageUrn: "urn:adsk.wipemea:dm.lineage:xCLLbKXaTJugWRJKyXn3lA",
+  //       viewableName: "DB8-SEMY-P41-ASBUILT",
+  //     },
+  //     {
+  //       lineageUrn: "urn:adsk.wipemea:dm.lineage:s8kRPfTvTHSCSk3zORE9-w",
+  //       viewableName: "DB8-SEMY-SITE-ASBUILT",
+  //     },
+  //   ],
+  // },
+
+
+    // published folder test model
   {
     containerId: "bd676732-fbaf-4f1e-bd70-35268dbb216c",
-    definition: [
-      {
-        lineageUrn: "urn:adsk.wipemea:dm.lineage:4b04FjlWQ1a2OzXiLry9qQ",
-        viewableName: "DB8-SEMY-ARST-ASBUILT",
-      },
-      {
-        lineageUrn: "urn:adsk.wipemea:dm.lineage:xCLLbKXaTJugWRJKyXn3lA",
-        viewableName: "DB8-SEMY-P41-ASBUILT",
-      },
-      {
-        lineageUrn: "urn:adsk.wipemea:dm.lineage:s8kRPfTvTHSCSk3zORE9-w",
-        viewableName: "DB8-SEMY-SITE-ASBUILT",
-      },
-    ],
+    "definition": [
+                {
+                    "lineageUrn": "urn:adsk.wipemea:dm.lineage:_vmIwVi4R0aCM6DxgVIwNw",
+                    "viewableName": "DB8-SEMY-ARST-ASBUILT"
+                },
+                {
+                  "lineageUrn": "urn:adsk.wipemea:dm.lineage:sPWJFpwHRjm99xLfzTZuCw",
+                  "viewableName": "DB8-SEMY-SITE-ASBUILT",
+                },
+                {
+                  "lineageUrn": "urn:adsk.wipemea:dm.lineage:RNAEeDZJSeeCG88JyEJTrg",
+                  "viewableName": "DB8-SEMY-P41-ASBUILT",
+                },
+    ]
   },
 
   {
@@ -689,6 +709,9 @@ async function getProjectModels(containerId) {
   const modelSet = modelSetViews.filter(
     (model) => model.containerId === containerId
   );
+
+
+  
   if (modelSet.length > 0) {
     modelCount = modelSet[0].definition.length;
     const projectItemResults = await Promise.all(projectItems);
@@ -712,7 +735,7 @@ async function getProjectModels(containerId) {
       if(!objItem.length) {
         console.warn("No matching item found for lineageUrn:", model.lineageUrn);
         const accessToken = localStorage.getItem('authTokenHemyIssue'); // Retrieve the access token
-        const versionsUrl = `https://developer.api.autodesk.com/data/v1/projects/b.${modelSet[0].containerId}/items/${modelSet[0].definition[modelsLoaded].lineageUrn}/versions`;
+        const versionsUrl = `https://developer.api.autodesk.com/data/v1/projects/b.${modelSet[0].containerId}/items/${model.lineageUrn}/versions`;
         const response = await fetch(versionsUrl, {
             method: 'GET',
             headers: {
@@ -774,7 +797,7 @@ async function getProjectModels(containerId) {
 // !!!! test fix 2
 // async function getProjectModels(containerId) {
 //   let offset = null;
-//   
+  
 
 //   function onDocumentLoadFailure(code, message) {
 //     alert("Could not load model. See console for more details.");
@@ -814,6 +837,7 @@ async function getProjectModels(containerId) {
 //           modelsLoaded++;
 //           if (modelsLoaded === 1) {
 //             offset = model?.getData()?.globalOffset || { x: 0, y: 0, z: 0 };
+//             console.log("model.getData()", model.getData());
 //             console.log("✅ Saved offset from first model:", offset);
 //           }
 
@@ -920,187 +944,6 @@ async function modelLoaded(evt) {
         viewer.impl.invalidate(true, true, true);
         console.log("🔁 Viewer invalidated after pushpin load");
       });
-
-     // Multiple Hard Assets
-
-      let multiSelectMode = false;
-let selectedAssets = new Set();
-
-// Buttons (ensure these exist in your HTML)
-const btn = document.getElementById("multiSelectBtn");
-const clearBtn = document.getElementById("clearSelectionBtn");
-
-// Update selection count on button
-function updateButtonCount() {
-    if (!btn) return;
-    btn.textContent = `Multi-Select (${selectedAssets.size})`;
-}
-
-// Highlight a dbId safely
-function highlight(dbId) {
-    if (!dbId || !viewer.model) return;
-    const fragList = viewer.model.getFragmentList();
-    const fragCount = fragList.getCount();
-
-    for (let fragId = 0; fragId < fragCount; fragId++) {
-        const dbIds = [];
-        fragList.getDbIds(fragId, dbIds);
-        if (dbIds.includes(dbId)) {
-            viewer.impl.setThemingColor(fragId, new THREE.Vector4(0,1,0,1), viewer.model);
-        }
-    }
-    viewer.impl.invalidate(true,true,true);
-}
-
-// Remove highlight
-function removeHighlight(dbId) {
-    if (!dbId || !viewer.model) return;
-    const fragList = viewer.model.getFragmentList();
-    const fragCount = fragList.getCount();
-
-    for (let fragId = 0; fragId < fragCount; fragId++) {
-        const dbIds = [];
-        fragList.getDbIds(fragId, dbIds);
-        if (dbIds.includes(dbId)) {
-            viewer.impl.setThemingColor(fragId, null, viewer.model);
-        }
-    }
-    viewer.impl.invalidate(true,true,true);
-}
-
-// Apply all highlights
-function applyHighlights() {
-    selectedAssets.forEach(dbId => highlight(dbId));
-}
-
-// Multi-Select Button
-btn.addEventListener("click", () => {
-    multiSelectMode = !multiSelectMode;
-
-    if (!multiSelectMode) {
-        // Clear selection when turning multi-select off
-        selectedAssets.clear();
-        viewer.clearSelection();
-        viewer.clearThemingColors();
-    }
-
-    btn.classList.toggle("active", multiSelectMode);
-    updateButtonCount();
-});
-
-// Clear Selection Button
-clearBtn.addEventListener("click", () => {
-    selectedAssets.clear();
-    viewer.clearSelection();
-    viewer.clearThemingColors();
-    updateButtonCount();
-});
-
-// Pointer handler: tap / click
-function attachPointerHandler() {
-    viewer.impl.canvas.addEventListener("pointerdown", event => {
-        event.preventDefault();
-        const rect = viewer.impl.canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-
-        const hit = viewer.impl.hitTest(x, y, true);
-        if (!hit || !hit.dbId) return;
-        const dbId = hit.dbId;
-
-        if (!multiSelectMode) {
-            // Single-select mode: clear previous selection
-            selectedAssets.clear();
-            selectedAssets.add(dbId);
-        } else {
-            // Multi-select toggle
-            if (selectedAssets.has(dbId)) selectedAssets.delete(dbId);
-            else selectedAssets.add(dbId);
-        }
-
-        // Clear previous theming and reapply
-        viewer.clearThemingColors();
-        applyHighlights();
-        viewer.select([...selectedAssets]);
-        updateButtonCount();
-    });
-}
-
-// Call this **after your model loads**
-attachPointerHandler();
-updateButtonCount();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      // await recenterModelsDynamically(viewer);
-
-      //  viewer.loadExtension("Autodesk.AEC.LevelsExtension").then(function (levelsExt) {
-      //     if (levelsExt && levelsExt.floorSelector) {
-      //       const floorData = levelsExt.floorSelector;
-
-      //       setTimeout(() => {
-      //         const levels = floorData._floors;
-      //         console.log("Floor Array after delay:", levels);
-
-      //         if (levels && levels.length > 0) {
-      //           levels.forEach((floor, index) => {
-      //             // console.log(`Floor ${index}:`, floor);
-      //           });
-      //         } else {
-      //           console.error("Floors array is still empty.");
-      //         }
-              
-      //       }, 1000); // Wait for 1 second before checking
-      //     } else {
-      //       console.error("Levels Extension or floorSelector is not available.");
-      //     }
-      //   });
-
-      
 
       viewer.loadExtension("Autodesk.AEC.Minimap3DExtension").then(async () => {
         console.log("Minimap3DExtension Extension Loaded");
