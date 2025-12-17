@@ -150,6 +150,10 @@ html {
     position: absolute;
     bottom: 10px;   /* move down */
     left: 10px;     /* keep left */
+#controls {
+    position: absolute;
+    top: 10px;
+    left: 10px;
     z-index: 9999;
     background: rgba(255,255,255,0.85);
     padding: 5px 10px;

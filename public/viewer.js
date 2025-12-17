@@ -29,22 +29,42 @@ const functionalLocation = params.get("floc");
 
 
 const modelSetViews = [
+  // {
+  //   containerId: "bd676732-fbaf-4f1e-bd70-35268dbb216c",
+  //   definition: [
+  //     {
+  //       lineageUrn: "urn:adsk.wipemea:dm.lineage:4b04FjlWQ1a2OzXiLry9qQ",
+  //       viewableName: "DB8-SEMY-ARST-ASBUILT",
+  //     },
+  //     {
+  //       lineageUrn: "urn:adsk.wipemea:dm.lineage:xCLLbKXaTJugWRJKyXn3lA",
+  //       viewableName: "DB8-SEMY-P41-ASBUILT",
+  //     },
+  //     {
+  //       lineageUrn: "urn:adsk.wipemea:dm.lineage:s8kRPfTvTHSCSk3zORE9-w",
+  //       viewableName: "DB8-SEMY-SITE-ASBUILT",
+  //     },
+  //   ],
+  // },
+
+
+    // published folder test model
   {
     containerId: "bd676732-fbaf-4f1e-bd70-35268dbb216c",
-    definition: [
-      {
-        lineageUrn: "urn:adsk.wipemea:dm.lineage:4b04FjlWQ1a2OzXiLry9qQ",
-        viewableName: "DB8-SEMY-ARST-ASBUILT",
-      },
-      {
-        lineageUrn: "urn:adsk.wipemea:dm.lineage:xCLLbKXaTJugWRJKyXn3lA",
-        viewableName: "DB8-SEMY-P41-ASBUILT",
-      },
-      {
-        lineageUrn: "urn:adsk.wipemea:dm.lineage:s8kRPfTvTHSCSk3zORE9-w",
-        viewableName: "DB8-SEMY-SITE-ASBUILT",
-      },
-    ],
+    "definition": [
+                {
+                    "lineageUrn": "urn:adsk.wipemea:dm.lineage:_vmIwVi4R0aCM6DxgVIwNw",
+                    "viewableName": "DB8-SEMY-ARST-ASBUILT"
+                },
+                {
+                  "lineageUrn": "urn:adsk.wipemea:dm.lineage:sPWJFpwHRjm99xLfzTZuCw",
+                  "viewableName": "DB8-SEMY-SITE-ASBUILT",
+                },
+                {
+                  "lineageUrn": "urn:adsk.wipemea:dm.lineage:RNAEeDZJSeeCG88JyEJTrg",
+                  "viewableName": "DB8-SEMY-P41-ASBUILT",
+                },
+    ]
   },
 
   {
@@ -689,6 +709,9 @@ async function getProjectModels(containerId) {
   const modelSet = modelSetViews.filter(
     (model) => model.containerId === containerId
   );
+
+
+  
   if (modelSet.length > 0) {
     modelCount = modelSet[0].definition.length;
     const projectItemResults = await Promise.all(projectItems);
@@ -712,7 +735,7 @@ async function getProjectModels(containerId) {
       if(!objItem.length) {
         console.warn("No matching item found for lineageUrn:", model.lineageUrn);
         const accessToken = localStorage.getItem('authTokenHemyIssue'); // Retrieve the access token
-        const versionsUrl = `https://developer.api.autodesk.com/data/v1/projects/b.${modelSet[0].containerId}/items/${modelSet[0].definition[modelsLoaded].lineageUrn}/versions`;
+        const versionsUrl = `https://developer.api.autodesk.com/data/v1/projects/b.${modelSet[0].containerId}/items/${model.lineageUrn}/versions`;
         const response = await fetch(versionsUrl, {
             method: 'GET',
             headers: {
@@ -774,7 +797,7 @@ async function getProjectModels(containerId) {
 // !!!! test fix 2
 // async function getProjectModels(containerId) {
 //   let offset = null;
-//   
+  
 
 //   function onDocumentLoadFailure(code, message) {
 //     alert("Could not load model. See console for more details.");
@@ -814,6 +837,7 @@ async function getProjectModels(containerId) {
 //           modelsLoaded++;
 //           if (modelsLoaded === 1) {
 //             offset = model?.getData()?.globalOffset || { x: 0, y: 0, z: 0 };
+//             console.log("model.getData()", model.getData());
 //             console.log("✅ Saved offset from first model:", offset);
 //           }
 
