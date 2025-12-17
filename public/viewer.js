@@ -945,6 +945,229 @@ async function modelLoaded(evt) {
         console.log("🔁 Viewer invalidated after pushpin load");
       });
 
+
+
+      (function() {
+    let multiSelectMode = false;
+    let forceSingleSelect = false;
+    let selectedAssets = new Set();
+
+
+    const btn = document.getElementById("multiSelectBtn");
+    const clearBtn = document.getElementById("clearSelectionBtn");
+
+    // -----------------------------
+    // Update button text/count
+    // -----------------------------
+    function updateButtonCount() {
+        if (!btn) return;
+        btn.textContent = `Multi-Select (${selectedAssets.size})`;
+        btn.classList.toggle("active", multiSelectMode);
+    }
+
+viewer.addEventListener(Autodesk.Viewing.OBJECT_TREE_CREATED_EVENT, () => {
+    console.log("Ready for theming");
+});
+
+
+// Apply highlights to selected assets
+function applyHighlights() {
+    if (!viewer) return;
+
+    // Remove previous highlights
+    viewer.clearThemingColors();
+
+    // Apply new highlights
+    selectedAssets.forEach(dbId => {
+        try {
+            viewer.setThemingColor(dbId, HIGHLIGHT_COLOR);
+        } catch (e) {
+            console.warn("Highlight failed for dbId:", dbId, e);
+        }
+    });
+
+    updateButtonCount(); // optional: your UI update
+}
+
+viewer.addEventListener(Autodesk.Viewing.SELECTION_CHANGED_EVENT, function(event) {
+    selectedAssets = event.dbIdArray;
+    applyHighlights();
+});
+
+const HIGHLIGHT_COLOR = new window.THREE.Vector4(1, 153/255, 28/255, 1);
+
+viewer.addEventListener(Autodesk.Viewing.GEOMETRY_LOADED_EVENT, () => {
+
+    // Now the model is *actually ready* for setThemingColor
+    console.log("Viewer geometry loaded — theming can be applied.");
+
+    // If you already have selectedAssets stored:
+    selectedAssets.forEach(id => {
+        viewer.setThemingColor(id, HIGHLIGHT_COLOR);
+    });
+
+    // Force a redraw so colors update
+    viewer.impl.invalidate(true, true, false);
+
+});
+
+
+    
+function updateButtonCount() {
+        if (!btn) return;
+        btn.textContent = `Multi-Select (${selectedAssets.size})`;
+        btn.classList.toggle("active", multiSelectMode);
+    }
+
+  
+    function getMainAssetDbId(dbId) {
+        if (!viewer.model) return dbId;
+
+        const tree = viewer.model.getData().instanceTree;
+        if (!tree) return dbId;
+
+        let parent = dbId;
+        while (parent) {
+            let frags = [];
+            if (tree.enumNodeFragments) tree.enumNodeFragments(parent, f => frags.push(f));
+            if (frags.length > 0) return parent; // found main asset
+            try {
+                const p = tree.getParentId(parent);
+                if (p === parent || p === undefined) break;
+                parent = p;
+            } catch (e) { break; }
+        }
+        return dbId; // fallback
+    }
+
+    // -----------------------------
+    // Multi-select toggle
+    // -----------------------------
+    if (btn) {
+        btn.addEventListener("click", () => {
+            multiSelectMode = !multiSelectMode;
+            if (!multiSelectMode) {
+                selectedAssets.clear();
+                if (viewer) {
+                    viewer.clearSelection();
+                    viewer.clearThemingColors();
+                }
+            }
+            updateButtonCount();
+        });
+    }
+
+    // -----------------------------
+    // Clear selection
+    // -----------------------------
+    if (clearBtn) {
+        clearBtn.addEventListener("click", () => {
+            selectedAssets.clear();
+            if (viewer) {
+                viewer.clearSelection();
+                viewer.clearThemingColors();
+            }
+            updateButtonCount();
+        });
+    }
+
+
+    // -----------------------------
+    // Pointer handler
+    // -----------------------------
+    function attachPointerHandler() {
+        if (!viewer || !viewer.impl || !viewer.impl.canvas) return;
+
+        viewer.impl.canvas.addEventListener("pointerdown", event => {
+            event.preventDefault();
+            const rect = viewer.impl.canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            let hit = null;
+            try { hit = viewer.impl.hitTest(x, y, false); } catch(e){}
+            if (!hit || !hit.dbId) return;
+
+            let dbId = getMainAssetDbId(hit.dbId); // select main asset
+
+            if (forceSingleSelect || !multiSelectMode) {
+                selectedAssets.clear();
+                selectedAssets.add(dbId);
+                forceSingleSelect = false; // reset
+            } else {
+                if (selectedAssets.has(dbId)) selectedAssets.delete(dbId);
+                else selectedAssets.add(dbId);
+            }
+
+            applyHighlights();
+            if (viewer) viewer.select([...selectedAssets]);
+        });
+    }
+
+    // -----------------------------
+    // Initialize
+    // -----------------------------
+    attachPointerHandler();
+    updateButtonCount();
+})();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+
+      // await recenterModelsDynamically(viewer);
+
+      //  viewer.loadExtension("Autodesk.AEC.LevelsExtension").then(function (levelsExt) {
+      //     if (levelsExt && levelsExt.floorSelector) {
+      //       const floorData = levelsExt.floorSelector;
+
+      //       setTimeout(() => {
+      //         const levels = floorData._floors;
+      //         console.log("Floor Array after delay:", levels);
+
+      //         if (levels && levels.length > 0) {
+      //           levels.forEach((floor, index) => {
+      //             // console.log(`Floor ${index}:`, floor);
+      //           });
+      //         } else {
+      //           console.error("Floors array is still empty.");
+      //         }
+              
+      //       }, 1000); // Wait for 1 second before checking
+      //     } else {
+      //       console.error("Levels Extension or floorSelector is not available.");
+      //     }
+      //   });
+
+      
+
       viewer.loadExtension("Autodesk.AEC.Minimap3DExtension").then(async () => {
         console.log("Minimap3DExtension Extension Loaded");
       });
@@ -1011,6 +1234,43 @@ async function modelLoaded(evt) {
 }
 
 // #endregion
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export async function loadModelsandCreateIssue(viewer, projectId, srcParam) {
   selectedProject = projectId;

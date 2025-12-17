@@ -145,6 +145,11 @@ html {
     font-size: xx-small;
 }
 
+
+#controls {
+    position: absolute;
+    bottom: 10px;   /* move down */
+    left: 10px;     /* keep left */
 #controls {
     position: absolute;
     top: 10px;
@@ -154,5 +159,6 @@ html {
     padding: 5px 10px;
     border-radius: 5px;
 }
+
 #controls button { margin-right:5px; padding:5px 10px; }
 #controls button.active { background-color:#4CAF50; color:white; }
