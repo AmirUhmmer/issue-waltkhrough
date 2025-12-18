@@ -1992,7 +1992,7 @@ export async function initiateCreateIssueV2(viewer, message, userGuid) {
       linkedDocuments: [
         {
           type: "TwoDVectorPushpin",
-          urn: item.id,
+          urn: item.relationships.item.data.id,
           createdAtVersion: item.attributes.versionNumber,
           details: {
             viewable: {
@@ -2005,8 +2005,8 @@ export async function initiateCreateIssueV2(viewer, message, userGuid) {
             viewerState: newIssue.viewerState,
           },
         },
-      ],
-      token: localStorage.getItem("authTokenHemyIssue")
+      ]
+      // token: localStorage.getItem("authTokenHemyIssue")
     };
 
     const response = await fetch(`/api/sqlite/pushpin`, {
