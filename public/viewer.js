@@ -728,6 +728,7 @@ async function getProjectModels(containerId) {
       console.log("Model container:", modelSet[0].containerId);
       console.log("Model urn:", modelSet[0].definition[modelsLoaded].lineageUrn);
 
+      // #region new loading fix
       // !! Fix if the item is not found. Get the latest version URN from versions 
       // * SAMPLE HG62
       let base64Urn = null;
@@ -746,6 +747,8 @@ async function getProjectModels(containerId) {
         console.log('Latest Version URN:', versionsData);
         if (versionsData.data && versionsData.data.length > 0) {
             const latestVersion = versionsData.data[0];  // Assuming the first item is the latest
+            console.log('Latest Version Data:', latestVersion);
+            g_projectItems.push(latestVersion);
             let latestVersionUrn = latestVersion.id;  // This will be the URN for the latest version
             console.log('Latest Version URN:', latestVersionUrn);
             base64Urn = btoa(latestVersionUrn);  // This encodes the URN to base64
@@ -772,6 +775,7 @@ async function getProjectModels(containerId) {
       }
       modelsLoaded++;
     });
+    // #endregion
   } else {
     projectItems.forEach(async (item, index) => {
       const itemObj = await item;
@@ -944,199 +948,6 @@ async function modelLoaded(evt) {
         viewer.impl.invalidate(true, true, true);
         console.log("🔁 Viewer invalidated after pushpin load");
       });
-
-
-
-      (function() {
-    let multiSelectMode = false;
-    let forceSingleSelect = false;
-    let selectedAssets = new Set();
-
-
-    const btn = document.getElementById("multiSelectBtn");
-    const clearBtn = document.getElementById("clearSelectionBtn");
-
-    // -----------------------------
-    // Update button text/count
-    // -----------------------------
-    function updateButtonCount() {
-        if (!btn) return;
-        btn.textContent = `Multi-Select (${selectedAssets.size})`;
-        btn.classList.toggle("active", multiSelectMode);
-    }
-
-viewer.addEventListener(Autodesk.Viewing.OBJECT_TREE_CREATED_EVENT, () => {
-    console.log("Ready for theming");
-});
-
-
-// Apply highlights to selected assets
-function applyHighlights() {
-    if (!viewer) return;
-
-    // Remove previous highlights
-    viewer.clearThemingColors();
-
-    // Apply new highlights
-    selectedAssets.forEach(dbId => {
-        try {
-            viewer.setThemingColor(dbId, HIGHLIGHT_COLOR);
-        } catch (e) {
-            console.warn("Highlight failed for dbId:", dbId, e);
-        }
-    });
-
-    updateButtonCount(); // optional: your UI update
-}
-
-viewer.addEventListener(Autodesk.Viewing.SELECTION_CHANGED_EVENT, function(event) {
-    selectedAssets = event.dbIdArray;
-    applyHighlights();
-});
-
-const HIGHLIGHT_COLOR = new window.THREE.Vector4(1, 153/255, 28/255, 1);
-
-viewer.addEventListener(Autodesk.Viewing.GEOMETRY_LOADED_EVENT, () => {
-
-    // Now the model is *actually ready* for setThemingColor
-    console.log("Viewer geometry loaded — theming can be applied.");
-
-    // If you already have selectedAssets stored:
-    selectedAssets.forEach(id => {
-        viewer.setThemingColor(id, HIGHLIGHT_COLOR);
-    });
-
-    // Force a redraw so colors update
-    viewer.impl.invalidate(true, true, false);
-
-});
-
-
-    
-function updateButtonCount() {
-        if (!btn) return;
-        btn.textContent = `Multi-Select (${selectedAssets.size})`;
-        btn.classList.toggle("active", multiSelectMode);
-    }
-
-  
-    function getMainAssetDbId(dbId) {
-        if (!viewer.model) return dbId;
-
-        const tree = viewer.model.getData().instanceTree;
-        if (!tree) return dbId;
-
-        let parent = dbId;
-        while (parent) {
-            let frags = [];
-            if (tree.enumNodeFragments) tree.enumNodeFragments(parent, f => frags.push(f));
-            if (frags.length > 0) return parent; // found main asset
-            try {
-                const p = tree.getParentId(parent);
-                if (p === parent || p === undefined) break;
-                parent = p;
-            } catch (e) { break; }
-        }
-        return dbId; // fallback
-    }
-
-    // -----------------------------
-    // Multi-select toggle
-    // -----------------------------
-    if (btn) {
-        btn.addEventListener("click", () => {
-            multiSelectMode = !multiSelectMode;
-            if (!multiSelectMode) {
-                selectedAssets.clear();
-                if (viewer) {
-                    viewer.clearSelection();
-                    viewer.clearThemingColors();
-                }
-            }
-            updateButtonCount();
-        });
-    }
-
-    // -----------------------------
-    // Clear selection
-    // -----------------------------
-    if (clearBtn) {
-        clearBtn.addEventListener("click", () => {
-            selectedAssets.clear();
-            if (viewer) {
-                viewer.clearSelection();
-                viewer.clearThemingColors();
-            }
-            updateButtonCount();
-        });
-    }
-
-
-    // -----------------------------
-    // Pointer handler
-    // -----------------------------
-    function attachPointerHandler() {
-        if (!viewer || !viewer.impl || !viewer.impl.canvas) return;
-
-        viewer.impl.canvas.addEventListener("pointerdown", event => {
-            event.preventDefault();
-            const rect = viewer.impl.canvas.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const y = event.clientY - rect.top;
-
-            let hit = null;
-            try { hit = viewer.impl.hitTest(x, y, false); } catch(e){}
-            if (!hit || !hit.dbId) return;
-
-            let dbId = getMainAssetDbId(hit.dbId); // select main asset
-
-            if (forceSingleSelect || !multiSelectMode) {
-                selectedAssets.clear();
-                selectedAssets.add(dbId);
-                forceSingleSelect = false; // reset
-            } else {
-                if (selectedAssets.has(dbId)) selectedAssets.delete(dbId);
-                else selectedAssets.add(dbId);
-            }
-
-            applyHighlights();
-            if (viewer) viewer.select([...selectedAssets]);
-        });
-    }
-
-    // -----------------------------
-    // Initialize
-    // -----------------------------
-    attachPointerHandler();
-    updateButtonCount();
-})();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -2140,11 +1951,21 @@ export async function initiateCreateIssueV2(viewer, message, userGuid) {
       z: newIssue.position.z + offset.z,
     };
     const view = metadata.data.metadata[0];
-    const item = g_projectItems.filter(
-      (item) =>
-        item.latestVersion.relationships.derivatives.data.id ===
-        newIssue.seedURN
-    )[0];
+    console.log("test_projectItems", g_projectItems);
+    let item =
+      g_projectItems.find(
+        i =>
+          i.latestVersion?.relationships?.derivatives?.data?.id ===
+          newIssue.seedURN
+      ) ||
+      g_projectItems.find(
+        i =>
+          i.relationships?.derivatives?.data?.id ===
+          newIssue.seedURN
+      );
+
+
+    console.log("item for issue", item);
 
     const issuePayload = {
       title: "New Issue",
@@ -2172,7 +1993,7 @@ export async function initiateCreateIssueV2(viewer, message, userGuid) {
         {
           type: "TwoDVectorPushpin",
           urn: item.id,
-          createdAtVersion: item.latestVersion.attributes.versionNumber,
+          createdAtVersion: item.attributes.versionNumber,
           details: {
             viewable: {
               name: newIssue.objectData.viewName,
