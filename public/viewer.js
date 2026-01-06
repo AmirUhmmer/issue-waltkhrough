@@ -1298,9 +1298,9 @@ export async function loadModelsandLoadOneIssue(
   const modelSet = modelSetViews.filter(
     (model) => model.containerId === projectId
   );
+  let base64Urn = null;
 
-
-  if (modelSet.length > 0) {
+ if (modelSet.length > 0) {
     modelCount = modelSet[0].definition.length;
     const projectItemResults = await Promise.all(projectItems);
     console.log("Project Item Results", projectItemResults);
@@ -1310,13 +1310,53 @@ export async function loadModelsandLoadOneIssue(
         (item) => item.id === model.lineageUrn
       );
       console.log("Object", objItem);
+      if(!objItem.length) {
+        console.warn("No matching item found for lineageUrn:", model.lineageUrn);
+        const accessToken = localStorage.getItem('authTokenHemyIssue'); // Retrieve the access token
+        const versionsUrl = `https://developer.api.autodesk.com/data/v1/projects/b.${modelSet[0].containerId}/items/${model.lineageUrn}/versions`;
+        const response = await fetch(versionsUrl, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+            },
+        });
+      
+        const versionsData = await response.json();
+        console.log('Latest Version URN:', versionsData);
+        if (versionsData.data && versionsData.data.length > 0) {
+            const latestVersion = versionsData.data[0];  // Assuming the first item is the latest
+            console.log('Latest Version Data:', latestVersion);
+            g_projectItems.push(latestVersion);
+            let latestVersionUrn = latestVersion.id;  // This will be the URN for the latest version
+            console.log('Latest Version URN:', latestVersionUrn);
+            base64Urn = btoa(latestVersionUrn);  // This encodes the URN to base64
+            // console.log('Base64 URN:', base64Urn);
+        } else {
+            console.error('No versions found for the file.');
+        }
+      }
       // if (objItem == null || !objItem.length) return;
-      const urn = window.btoa(objItem[0].latestVersion.id).replace(/=/g, "");
-      Autodesk.Viewing.Document.load(
-        `urn:${urn}`,
-        onDocumentLoadSuccess,
-        onDocumentLoadFailure
-      );
+      // const urn = window.btoa(objItem[0].latestVersion.id).replace(/=/g, "");
+      // Autodesk.Viewing.Document.load(
+      //   `urn:${urn}`,
+      //   onDocumentLoadSuccess,
+      //   onDocumentLoadFailure
+      // );
+      if (objItem.length && objItem[0].latestVersion) {
+        g_projectItems.push(objItem[0]);
+        const urn = window.btoa(objItem[0].latestVersion.id).replace(/=/g, "");
+        console.log("Item URN", urn);
+        Autodesk.Viewing.Document.load(
+          `urn:${urn}`,
+          onDocumentLoadSuccess,
+          onDocumentLoadFailure
+        );
+      } else if (base64Urn) {
+        console.log("Using fallback URN", base64Urn);
+        Autodesk.Viewing.Document.load(`urn:${base64Urn}`, onDocumentLoadSuccess, onDocumentLoadFailure);
+      } else {
+        alert("There's a problem on the model.Please contact admin.");
+      }
     });
   }
   else {
@@ -1337,6 +1377,7 @@ export async function loadModelsandLoadOneIssue(
       );
     });
   }
+
 
 
 }
