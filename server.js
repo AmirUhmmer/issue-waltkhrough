@@ -66,7 +66,6 @@ app.use(require('./routes/endpoints/dm.js'));
 app.use(require('./routes/endpoints/issues.js'));
 app.use(require('./routes/endpoints/modelderivative.js'));
 app.use(require('./routes/endpoints/sqlite.js'));
-
 app.use(createwssRoutes(clients));
 
 
