@@ -1944,12 +1944,6 @@ export async function initiateCreateIssueV2(viewer, message, userGuid) {
     div_loading.classList.remove("d-none");
     const newIssue = pushpin_item.itemData;
     const metadata = await getMetadata(newIssue.seedURN);
-      // Fix pushpin position to world coordinates
-    const correctedPosition = {
-      x: newIssue.position.x + offset.x,
-      y: newIssue.position.y + offset.y,
-      z: newIssue.position.z + offset.z,
-    };
     const view = metadata.data.metadata[0];
     console.log("test_projectItems", g_projectItems);
     let item =
@@ -1992,8 +1986,10 @@ export async function initiateCreateIssueV2(viewer, message, userGuid) {
       linkedDocuments: [
         {
           type: "TwoDVectorPushpin",
-          urn: item.relationships.item.data.id,
-          createdAtVersion: item.attributes.versionNumber,
+          // urn: item.relationships.item.data.id || item.attributes.id,
+          // createdAtVersion: item.attributes.versionNumber || item.latestVersion.attributes.versionNumber,
+          urn: item.relationships?.item?.data?.id ?? item.attributes?.id,
+          createdAtVersion: item.attributes?.versionNumber ?? item.latestVersion?.attributes?.versionNumber,
           details: {
             viewable: {
               name: newIssue.objectData.viewName,
