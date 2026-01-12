@@ -1953,6 +1953,7 @@ async function initIssueCreate() {
 // #endregion
 
 // #region: Create Issue v2
+
 export async function initiateCreateIssueV2(viewer, message, userGuid) {
   const pushpin_ext = await viewer.loadExtension(
     "Autodesk.BIM360.Extension.PushPin"
@@ -2024,13 +2025,16 @@ export async function initiateCreateIssueV2(viewer, message, userGuid) {
           urn: newIssue.objectData.urn,
         },
       },
+      
       linkedDocuments: [
         {
           type: "TwoDVectorPushpin",
           // urn: item.relationships.item.data.id || item.attributes.id,
           // createdAtVersion: item.attributes.versionNumber || item.latestVersion.attributes.versionNumber,
-          urn: item.relationships?.item?.data?.id ?? item.attributes?.id,
+          //urn: item.relationships?.item?.data?.id ?? item.attributes?.id,
+          urn: item.relationships?.item?.data?.id ? item.relationships.item.data.id: item.attributes?.id? item.attributes.id: item.id,
           createdAtVersion: item.attributes?.versionNumber ?? item.latestVersion?.attributes?.versionNumber,
+        
           details: {
             viewable: {
               name: newIssue.objectData.viewName,
