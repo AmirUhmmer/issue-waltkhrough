@@ -3,6 +3,7 @@
 import { createIssue_v2, getAllIssues, getIssuesFiltered } from "./issues.js";
 import { getMetadata } from "./modelderivative.js";
 import { getOneProject } from "./sidebar.js";
+import * as viewerFunctions from "./ViewerFunctions/workset.mjs";
 var viewer = null;
 var pushpinData = null;
 var selectedProject = null;
@@ -1443,6 +1444,7 @@ async function issuesModelLoaded(evt) {
 
 // #region: Load Pushpins
 async function loadIssuePushpins(filter = {}) {
+  viewerFunctions.workset(viewer);
   pushpinExt = await viewer.loadExtension("Autodesk.BIM360.Extension.PushPin");
 
   pushpinExt.pushPinManager.addEventListener(
@@ -2029,7 +2031,8 @@ export async function initiateCreateIssueV2(viewer, message, userGuid) {
           type: "TwoDVectorPushpin",
           // urn: item.relationships.item.data.id || item.attributes.id,
           // createdAtVersion: item.attributes.versionNumber || item.latestVersion.attributes.versionNumber,
-          urn: item.relationships?.item?.data?.id ?? item.attributes?.id,
+          // urn: item.relationships?.item?.data?.id ?? item.attributes?.id,
+          urn:  item.relationships?.item?.data?.id ?? item.attributes?.id ?? item.id,
           createdAtVersion: item.attributes?.versionNumber ?? item.latestVersion?.attributes?.versionNumber,
           details: {
             viewable: {

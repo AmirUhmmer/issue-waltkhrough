@@ -207,7 +207,7 @@ async function main() {
 
     const profile = await resp.json();
     // console.log("USER PROFILE", profile.userid);
-    console.log("USER token", localStorage.getItem("authTokenHemyIssue"));
+    // console.log("USER token", localStorage.getItem("authTokenHemyIssue"));
 
     viewer = await initViewer(document.getElementById("preview"));
     divLoading.classList.add("d-none");
