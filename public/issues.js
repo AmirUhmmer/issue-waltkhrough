@@ -56,9 +56,9 @@ export async function getAllIssues(projectId, filter) {
     `${window.location.origin}/api/allIssues/${projectId}?${params}`, {
         headers: {
             'Authorization': `Bearer ${token}`,  // Send authToken in the Authorization header
-            'x-refresh-token': refreshToken,         // Send refreshToken in a custom header
+            'x-refresh-token': token,         // Send refreshToken in a custom header
             'x-expires-at': expires_at,              // Send expires_at in a custom header
-            'x-internal-token': internal_token       // Send internal_token in a custom header
+            'x-internal-token': token       // Send internal_token in a custom header
         }
     });
   //  console.log(res.json());

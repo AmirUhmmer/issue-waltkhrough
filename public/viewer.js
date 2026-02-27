@@ -2105,6 +2105,10 @@ export async function initiateCreateIssue_Mobile(viewer, message, userGuid) {
     div_loading.classList.remove("d-none");
     const newIssue = pushpin_item.itemData;
     const metadata = await getMetadata(newIssue.seedURN);
+  
+    
+
+ 
     const view = metadata.data.metadata[0];
     const item = g_projectItems.filter(
       (item) =>

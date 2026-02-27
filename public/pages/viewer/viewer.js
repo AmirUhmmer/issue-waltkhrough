@@ -99,8 +99,8 @@ async function renderProjectItems(containerId) {
 function setupSocket(userGuid, viewer) {
   const create_socket = () => {
     const socket = new WebSocket(
-      // `wss://staging-issue-reporting-bxcubjc8gfemgkay.northeurope-01.azurewebsites.net/ws/${userGuid}` // <--staging
-     `wss://autodesk-issues-reporting.azurewebsites.net/ws/${userGuid}`
+     `wss://staging-issue-reporting-bxcubjc8gfemgkay.northeurope-01.azurewebsites.net/ws/${userGuid}` // <--staging
+    // `wss://autodesk-issues-reporting.azurewebsites.net/ws/${userGuid}`
       // `ws://localhost:8080/ws/${userGuid}` // <-- localhost
     );
     socket.onmessage = async (event) => {
@@ -145,69 +145,135 @@ function handleMessageEvents() {
   });
 }
 
-async function handleLogin() {
-  localStorage.removeItem("authToken");
-  localStorage.removeItem("refreshToken");
-  localStorage.removeItem("expires_at");
-  localStorage.removeItem("internal_token");
+// async function handleLogin() {
+//   localStorage.removeItem("authToken");
+//   localStorage.removeItem("refreshToken");
+//   localStorage.removeItem("expires_at");
+//   localStorage.removeItem("internal_token");
   
-  const url = await fetch("/api/auth/sso");
-  if (!url.ok) {
-    console.log("Failed to get access token");
+//   const url = await fetch("/api/auth/sso");
+//   // SSA
+
+
+
+
+//   if (!url.ok) {
+//     console.log("Failed to get access token");
+//     return;
+//   }
+//   const url_json = await url.json();
+//   console.log(url_json);
+//   const loginWindow = window.open(url_json, "Login", "width=600,height=600");
+//   window.addEventListener("message", async (event) => {
+//     if (event.origin !== window.location.origin) {
+//       return;
+//     }
+//     const { token, refreshToken, expires_at, internal_token } = event.data;
+//     if (token) {
+//       localStorage.setItem("authTokenHemyIssue", token);
+//       localStorage.setItem("refreshTokenHemyIssue", refreshToken);
+//       localStorage.setItem("expires_atHemyIssue", expires_at);
+//       localStorage.setItem("internal_tokenHemyIssue", internal_token);
+//       // Instead of reloading, try to fetch the profile again
+//       await main();
+//     }
+//   });
+// }
+
+
+async function handleLogin() {
+  const response = await fetch("/api/auth/SSAToken");
+ 
+  if (!response.ok) {
+    console.log("Failed to get SSA token");
     return;
   }
-  const url_json = await url.json();
-  console.log(url_json);
-  const loginWindow = window.open(url_json, "Login", "width=600,height=600");
-  window.addEventListener("message", async (event) => {
-    if (event.origin !== window.location.origin) {
-      return;
-    }
-    const { token, refreshToken, expires_at, internal_token } = event.data;
-    if (token) {
-      localStorage.setItem("authTokenHemyIssue", token);
-      localStorage.setItem("refreshTokenHemyIssue", refreshToken);
-      localStorage.setItem("expires_atHemyIssue", expires_at);
-      localStorage.setItem("internal_tokenHemyIssue", internal_token);
-      // Instead of reloading, try to fetch the profile again
-      await main();
-    }
-  });
+ 
+  const tokenData = await response.json();
+ 
+  const expiresAt = Date.now() + tokenData.expires_in * 1000;
+ 
+  localStorage.setItem("authTokenHemyIssue", tokenData.access_token);
+  localStorage.setItem("expires_atHemyIssue", expiresAt);
+  console.log("SSA Token acquired, expires at:", new Date(expiresAt).toLocaleTimeString());
+  // await main();
 }
+
+// async function main() {
+//   try {
+//     handleMessageEvents();
+//     const expiresAt = localStorage.getItem("expires_atHemyIssue");
+//     console.log("Expires:", expiresAt);
+//     if(!expiresAt || Date.now() > parseInt(expiresAt)) {
+//       localStorage.removeItem("authTokenHemyIssue");
+//       localStorage.removeItem("refreshTokenHemyIssue");
+//       localStorage.removeItem("expires_atHemyIssue");
+//       localStorage.removeItem("internal_tokenHemyIssue");
+//       console.log("Token expired or not found, redirecting to login.");
+//       await handleLogin();
+//       return;
+//     }
+//     const resp = await fetch(`/api/auth/profile`, {
+//       method: "GET",
+//       credentials: "include",
+//       headers: {
+//         "Authorization": `Bearer ${localStorage.getItem("authTokenHemyIssue")}`,
+//         "x-refresh-token": localStorage.getItem("refreshTokenHemyIssue"), // Send refreshToken in a custom header
+//         "x-expires-at": localStorage.getItem("expires_atHemyIssue"), // Send expires_at in a custom header
+//         "x-internal-token": localStorage.getItem("internal_tokenHemyIssue"), // Send internal_token in a custom header
+//       },
+//     });
+
+//     if (!resp.ok) {
+//       await handleLogin();
+//       return;
+//     }
+
+//     const profile = await resp.json();
+//     // console.log("USER PROFILE", profile.userid);
+//     // console.log("USER token", localStorage.getItem("authTokenHemyIssue"));
+
+//     viewer = await initViewer(document.getElementById("preview"));
+//     divLoading.classList.add("d-none");
+//     login.style.display = "none";
+//     login.style.visibility = "hidden";
+//     divHeader.classList.remove("d-none");
+
+//     if (deviceType) {
+//       if (deviceType == "mobile") {
+//         divMainSidebar.classList.add("d-none");
+//       } else {
+//         divMainSidebar.classList.remove("d-none");
+//       }
+//     }
+
+//     if (mode === "createIssue") {
+//       divMainSidebar.classList.add("d-none");
+//       divHeader.classList.add("d-none");
+//       loadModelsandCreateIssue(viewer, containerId, { srcWin: window, srcOrigin: window.origin });
+//     } else if (mode === "viewIssues") {
+//       await loadModelAndIssues(viewer, {}, containerId);
+//       await renderProjectItems(containerId);
+//       setupSidebarListeners(viewer);
+//       if (userGuid) {
+//         setupSocket(userGuid, viewer);
+//       }
+//     }
+
+//   } catch (err) {
+//     alert("error displaying application");
+//     console.log(err);
+//   }
+// }
+
+
+
+
 
 async function main() {
   try {
     handleMessageEvents();
-    const expiresAt = localStorage.getItem("expires_atHemyIssue");
-    console.log("Expires:", expiresAt);
-    if(!expiresAt || Date.now() > parseInt(expiresAt)) {
-      localStorage.removeItem("authTokenHemyIssue");
-      localStorage.removeItem("refreshTokenHemyIssue");
-      localStorage.removeItem("expires_atHemyIssue");
-      localStorage.removeItem("internal_tokenHemyIssue");
-      console.log("Token expired or not found, redirecting to login.");
-      await handleLogin();
-      return;
-    }
-    const resp = await fetch(`/api/auth/profile`, {
-      method: "GET",
-      credentials: "include",
-      headers: {
-        "Authorization": `Bearer ${localStorage.getItem("authTokenHemyIssue")}`,
-        "x-refresh-token": localStorage.getItem("refreshTokenHemyIssue"), // Send refreshToken in a custom header
-        "x-expires-at": localStorage.getItem("expires_atHemyIssue"), // Send expires_at in a custom header
-        "x-internal-token": localStorage.getItem("internal_tokenHemyIssue"), // Send internal_token in a custom header
-      },
-    });
-
-    if (!resp.ok) {
-      await handleLogin();
-      return;
-    }
-
-    const profile = await resp.json();
-    // console.log("USER PROFILE", profile.userid);
-    // console.log("USER token", localStorage.getItem("authTokenHemyIssue"));
+    await handleLogin();
 
     viewer = await initViewer(document.getElementById("preview"));
     divLoading.classList.add("d-none");

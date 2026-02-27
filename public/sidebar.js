@@ -10,9 +10,10 @@
 
 async function getJSON(url) {
     const token = localStorage.getItem('authTokenHemyIssue');
-    const refreshToken = localStorage.getItem('refreshTokenHemyIssue');
+    // const refreshToken = localStorage.getItem('refreshTokenHemyIssue');
+    const refreshToken = localStorage.getItem('authTokenHemyIssue'); //test
     const expires_at = localStorage.getItem('expires_atHemyIssue');
-    const internal_token = localStorage.getItem('internal_tokenHemyIssue');
+    // const internal_token = localStorage.getItem('authTokenHemyIssue');
 
 
     console.log("Request URL:", url);
@@ -23,7 +24,8 @@ async function getJSON(url) {
             'Authorization': `Bearer ${token}`,  // Send authToken in the Authorization header
             'x-refresh-token': refreshToken,         // Send refreshToken in a custom header
             'x-expires-at': expires_at,              // Send expires_at in a custom header
-            'x-internal-token': internal_token       // Send internal_token in a custom header
+            // 'x-internal-token': internal_token       // Send internal_token in a custom header
+            'x-internal-token': token       // Send internal_token in a custom header (using authToken for simplicity)
         }
     });
     // if (!resp.ok) {
