@@ -243,24 +243,29 @@ service.authRefreshMiddleware = async (req, res, next) => {
     let { refresh_token, expires_at, internal_token } = req.session;
 
     // If not in session, hydrate from headers
-    if (!refresh_token && req.headers["x-refresh-token"]) {
-      refresh_token = req.headers["x-refresh-token"];
-      expires_at = req.headers["x-expires-at"];
-      internal_token = req.headers["x-internal-token"];
+    // if (!refresh_token && req.headers["x-refresh-token"]) {
+    //   refresh_token = req.headers["x-refresh-token"];
+    //   expires_at = req.headers["x-expires-at"];
+    //   internal_token = req.headers["x-internal-token"];
 
-      // Save them into session for next time
-      req.session.refresh_token = refresh_token;
-      req.session.expires_at = expires_at;
-      req.session.internal_token = internal_token;
-      console.log("Session hydrated from headers");
-    }
+    //   // Save them into session for next time
+    //   req.session.refresh_token = refresh_token;
+    //   req.session.expires_at = expires_at;
+    //   req.session.internal_token = internal_token;
+    //   console.log("Session hydrated from headers");
+    // }
 
-    if (!refresh_token) {
-      return res.status(401).end();
-    }
+    // if (!refresh_token) {
+    //   return res.status(401).end();
+    // }
+
+    refresh_token = req.headers["x-refresh-token"];
+    expires_at = req.headers["x-expires-at"];
+    internal_token = req.headers["x-internal-token"];
 
     console.log("Using refresh token:", refresh_token);
-
+    console.log("Token expires at:", expires_at, "which is", new Date(expires_at));
+    console.log(expires_at < Date.now());
     if (expires_at < Date.now()) {
         const internalCredentials = await authenticationClient.refreshToken(refresh_token, APS_CLIENT_ID, {
             clientSecret: APS_CLIENT_SECRET,
@@ -275,8 +280,9 @@ service.authRefreshMiddleware = async (req, res, next) => {
         req.session.refresh_token = publicCredentials.refresh_token;
         req.session.expires_at = Date.now() + internalCredentials.expires_in * 1000;
     }
+
     req.internalOAuthToken = {
-        access_token: req.session.internal_token,
+        access_token: internal_token,
         expires_in: Math.round((req.session.expires_at - Date.now()) / 1000),
     };
     req.publicOAuthToken = {
