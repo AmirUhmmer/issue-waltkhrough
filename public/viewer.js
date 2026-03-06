@@ -950,7 +950,29 @@ async function modelLoaded(evt) {
         console.log("🔁 Viewer invalidated after pushpin load");
       });
 
+      setTimeout(() => {
 
+  console.log("Removing unwanted toolbar buttons...");
+
+  const navTools = viewer.toolbar.getControl("navTools");
+  const modelTools = viewer.toolbar.getControl("modelTools");
+
+  if (navTools) {
+    const cameraBtn = navTools.getControl("toolbar-cameraSubmenuTool");
+    if (cameraBtn) navTools.removeControl(cameraBtn);
+  }
+
+  if (modelTools) {
+
+    const documentBtn = modelTools.getControl("toolbar-documentModels");
+    if (documentBtn) modelTools.removeControl(documentBtn);
+
+    const explodeBtn = modelTools.getControl("toolbar-explodeTool");
+    if (explodeBtn) modelTools.removeControl(explodeBtn);
+
+  }
+
+}, 1500);
 
         
 
