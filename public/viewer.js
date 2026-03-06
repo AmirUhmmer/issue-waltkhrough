@@ -949,30 +949,36 @@ async function modelLoaded(evt) {
         viewer.impl.invalidate(true, true, true);
         console.log("🔁 Viewer invalidated after pushpin load");
       });
+      
+console.log("Removing unwanted toolbar buttons...");
+      const removeToolbarButtons = () => {
+    const navTools = viewer.toolbar.getControl("navTools");
+    const modelTools = viewer.toolbar.getControl("modelTools");
 
-      setTimeout(() => {
+    if (navTools) {
+      const cameraBtn = navTools.getControl("toolbar-cameraSubmenuTool");
+      if (cameraBtn) navTools.removeControl(cameraBtn); // Remove Camera Interaction
+    }
 
-  console.log("Removing unwanted toolbar buttons...");
+    if (modelTools) {
+      const documentBtn = modelTools.getControl("toolbar-documentModels");
+      if (documentBtn) modelTools.removeControl(documentBtn); // Remove Document Browser
 
-  const navTools = viewer.toolbar.getControl("navTools");
-  const modelTools = viewer.toolbar.getControl("modelTools");
+      const explodeBtn = modelTools.getControl("toolbar-explodeTool");
+      if (explodeBtn) modelTools.removeControl(explodeBtn); // Remove Explode Model
 
-  if (navTools) {
-    const cameraBtn = navTools.getControl("toolbar-cameraSubmenuTool");
-    if (cameraBtn) navTools.removeControl(cameraBtn);
-  }
+      const fieldIssuesBtn = modelTools.getControl("toolbar-pushpinFieldIssuesVis");
+      if (fieldIssuesBtn) modelTools.removeControl(fieldIssuesBtn); // Remove Field Issues
 
-  if (modelTools) {
+      const rfiBtn = modelTools.getControl("toolbar-pushpinRfisVis");
+      if (rfiBtn) modelTools.removeControl(rfiBtn); // Remove RFI
+    }
+  };
 
-    const documentBtn = modelTools.getControl("toolbar-documentModels");
-    if (documentBtn) modelTools.removeControl(documentBtn);
-
-    const explodeBtn = modelTools.getControl("toolbar-explodeTool");
-    if (explodeBtn) modelTools.removeControl(explodeBtn);
-
-  }
-
-}, 1500);
+  // Run after a short delay to ensure toolbar and extensions are fully loaded
+  setTimeout(removeToolbarButtons, 500);
+  setTimeout(removeToolbarButtons, 1000);
+  setTimeout(removeToolbarButtons, 1500);
 
         
 
