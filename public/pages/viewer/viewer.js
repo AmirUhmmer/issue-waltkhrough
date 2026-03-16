@@ -13,6 +13,7 @@ import {
   initIssueDefs,
 } from "../../issues.js";
 import { getMetadata } from "../../modelderivative.js";
+import * as viewerFunctions from "../../ViewerFunctions/workset.mjs";
 
 let viewer = null;
 
@@ -96,6 +97,7 @@ async function renderProjectItems(containerId) {
   });
 }
 
+// #region Setup Socket
 function setupSocket(userGuid, viewer) {
   const create_socket = () => {
     const socket = new WebSocket(
@@ -128,6 +130,7 @@ function setupSocket(userGuid, viewer) {
   create_socket();
   setInterval(create_socket, 180000);
 }
+// #endregion
 
 function handleMessageEvents() {
   window.addEventListener("message", async function (event) {
@@ -293,10 +296,14 @@ async function main() {
       divMainSidebar.classList.add("d-none");
       divHeader.classList.add("d-none");
       loadModelsandCreateIssue(viewer, containerId, { srcWin: window, srcOrigin: window.origin });
+      const models = viewer.impl.modelQueue().getModels();
+      viewerFunctions.hideGenericModels(viewer, models);
     } else if (mode === "viewIssues") {
       await loadModelAndIssues(viewer, {}, containerId);
       await renderProjectItems(containerId);
       setupSidebarListeners(viewer);
+      const models = viewer.impl.modelQueue().getModels();
+      viewerFunctions.hideGenericModels(viewer, models);
       if (userGuid) {
         setupSocket(userGuid, viewer);
       }

@@ -390,6 +390,17 @@ export function initViewer(container) {
       viewer.setGroundReflection(false);
       viewer.setProgressiveRendering(true);
 
+      const models = viewer.impl.modelQueue().getModels();
+
+      viewer.addEventListener(Autodesk.Viewing.GEOMETRY_LOADED_EVENT, () =>
+        viewerFunctions.hideGenericModels(viewer, models),
+      );
+
+      [Autodesk.Viewing.ISOLATE_EVENT, Autodesk.Viewing.SHOW_ALL_EVENT].forEach(
+        (evt) =>
+          viewer.addEventListener(evt, () => viewerFunctions.hideGenericModels(viewer, models)),
+      );
+
       resolve(viewer);
     });
   });

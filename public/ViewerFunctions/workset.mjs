@@ -291,3 +291,72 @@ function sortWorksets(names) {
   });
 }
 // #endregion
+
+
+// #region Hide Generic Models
+export async function hideGenericModels(viewer, models) {
+  if (!Array.isArray(models)) return;
+
+  for (const model of models) {
+
+    const instanceTree = await new Promise((resolve, reject) => {
+      model.getObjectTree(resolve, reject);
+    });
+
+    const rootId = instanceTree.getRootId();
+    const allDbIds = [];
+
+    instanceTree.enumNodeChildren(rootId, dbId => {
+      allDbIds.push(dbId);
+    }, true);
+
+    const lockedGenericDbIds = new Set();
+
+    const checks = allDbIds.map(dbId => {
+      return new Promise(resolve => {
+        model.getProperties(dbId, props => {
+          // console.log(`Checking dbId ${dbId}:`, props?.properties);
+          if (!props?.properties) return resolve();
+
+          // console.log(`Checking dbId ${dbId}:`, props.properties);
+
+          const categoryProp = props.properties.find(
+            p => p.displayName === 'Category'
+          )?.displayValue;
+
+          const zoneProp = props.properties.find(
+            p => p.displayName === 'NV3DZoneName'
+          )?.displayValue;
+
+        //   console.log(`Checking dbId ${dbId}: Category=${categoryProp}, NV3DZoneName=${zoneProp}`);
+
+          const isGenericCategory =
+            categoryProp === 'Revit Generic Models' ||
+            categoryProp === 'Generic Models' ||
+            categoryProp === 'Revit Generic Model' ||
+            categoryProp === 'Generic Model' ||
+            categoryProp === 'Revit Mass' ||
+            categoryProp === 'Mass';
+
+          if (isGenericCategory && categoryProp) {
+            lockedGenericDbIds.add(dbId);
+          }
+
+          resolve();
+        });
+      });
+    });
+
+    await Promise.all(checks);
+
+    if (!lockedGenericDbIds.size) continue;
+
+    const ids = [...lockedGenericDbIds];
+
+    // console.log('Ghosting Generic Models:', ids);
+
+    viewer.setGhosting(true);
+    viewer.hide(ids, model);
+  }
+}
+// #endregion
