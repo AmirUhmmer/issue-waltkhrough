@@ -257,6 +257,18 @@ function buildWorksetCache(viewer, onDone) {
           p => p.displayName === "Workset"
         );
 
+        // 👉 ADD THIS
+        const zoneProp = props.properties?.find(
+          p => p.displayName === "NV3DZoneName"
+        )?.displayValue;
+
+        // ❗ skip if it's a zone
+        if (zoneProp) {
+          pending--;
+          if (pending === 0 && onDone) onDone();
+          return;
+        }
+
         if (workset?.displayValue) {
           if (!modelMap.has(workset.displayValue)) {
             modelMap.set(workset.displayValue, []);

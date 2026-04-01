@@ -4,8 +4,8 @@ if (!APS_CLIENT_ID || !APS_CLIENT_SECRET || !APS_CALLBACK_URL || !SERVER_SESSION
     console.warn('Missing some of the environment variables.');
     process.exit(1);
 }
-const INTERNAL_TOKEN_SCOPES = ['viewables:read', 'data:read','data:write','account:read', 'bucket:create', 'bucket:read'];
-const PUBLIC_TOKEN_SCOPES = ['viewables:read', 'account:read', 'data:read', 'data:write', 'bucket:create', 'bucket:read'];
+const INTERNAL_TOKEN_SCOPES = ['viewables:read', 'data:read', 'data:create', 'data:write', 'account:read', 'bucket:create', 'bucket:read'];
+const PUBLIC_TOKEN_SCOPES = ['viewables:read', 'account:read', 'data:read', 'data:create', 'data:write', 'bucket:create', 'bucket:read'];
 PORT = PORT || 8080
 
 const APS_BASE_URL = 'https://developer.api.autodesk.com';
