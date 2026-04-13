@@ -21,6 +21,218 @@ var src = null;
 var oneIssueDetails = null;
 var modelsLoaded = 0;
 
+// Map pushpin DOM id -> issue title (used by our tooltip overlay).
+var tooltipState = globalThis.__issuePushpinTooltipState || {
+  titlesById: {},
+  el: null,
+  rafPending: false,
+  latestEvent: null,
+  extensions: [],
+};
+globalThis.__issuePushpinTooltipState = tooltipState;
+
+function ensureIssuePushpinTooltip() {
+  if (tooltipState.el) return;
+
+  tooltipState.el = document.createElement("div");
+  tooltipState.el.id = "issue-pushpin-tooltip";
+  tooltipState.el.style.cssText = [
+    "position: fixed",
+    "z-index: 2147483647",
+    "display: none",
+    "pointer-events: none",
+    "background: rgba(0, 0, 0, 0.75)",
+    "color: #fff",
+    "padding: 6px 8px",
+    "border-radius: 4px",
+    "font-size: 12px",
+    "font-family: Arial, sans-serif",
+    "max-width: 320px",
+    "white-space: nowrap",
+    "overflow: hidden",
+    "text-overflow: ellipsis",
+  ].join(";");
+
+  document.body.appendChild(tooltipState.el);
+
+  const hideTooltip = () => {
+    if (!tooltipState.el) return;
+    tooltipState.el.style.display = "none";
+  };
+
+  const update = () => {
+    tooltipState.rafPending = false;
+    if (!tooltipState.latestEvent) return;
+    const ev = tooltipState.latestEvent;
+    tooltipState.latestEvent = null;
+
+    if (!tooltipState.titlesById || Object.keys(tooltipState.titlesById).length === 0) {
+      hideTooltip();
+      return;
+    }
+
+    // Most reliable path: compare mouse position to projected pushpin positions.
+    // This avoids depending on overlay DOM/event behavior.
+    if (viewer && typeof viewer.worldToClient === "function") {
+      const maxDistPx = 14;
+      const maxDistSq = maxDistPx * maxDistPx;
+
+      for (const ext of tooltipState.extensions || []) {
+        const pushpins = ext?.pushPinManager?.pushPinList || [];
+        for (const pin of pushpins) {
+          const p = pin?.itemData?.position;
+          if (!p) continue;
+
+          const world =
+            p.isVector3
+              ? p
+              : new THREE.Vector3(
+                  Number(p.x ?? p[0] ?? 0),
+                  Number(p.y ?? p[1] ?? 0),
+                  Number(p.z ?? p[2] ?? 0)
+                );
+          const screen = viewer.worldToClient(world);
+          if (!screen) continue;
+
+          const dx = ev.clientX - screen.x;
+          const dy = ev.clientY - screen.y;
+          const distSq = dx * dx + dy * dy;
+          if (distSq > maxDistSq) continue;
+
+          const pinId = pin?.itemData?.id;
+          const title =
+            pin?.container?.getAttribute?.("data-issue-title") ||
+            pin?.itemData?.label ||
+            (pinId ? tooltipState.titlesById[pinId] : null) ||
+            "Issue";
+          tooltipState.el.textContent = title;
+          tooltipState.el.style.left = `${ev.clientX + 12}px`;
+          tooltipState.el.style.top = `${ev.clientY + 12}px`;
+          tooltipState.el.style.display = "block";
+          return;
+        }
+      }
+    }
+
+    // Fallback: hit-test cursor against pushpin container bounds.
+    for (const ext of tooltipState.extensions || []) {
+      const pushpins = ext?.pushPinManager?.pushPinList || [];
+      for (const pin of pushpins) {
+        const container = pin?.container;
+        if (!container) continue;
+        const r = container.getBoundingClientRect();
+        const isInside =
+          ev.clientX >= r.left &&
+          ev.clientX <= r.right &&
+          ev.clientY >= r.top &&
+          ev.clientY <= r.bottom;
+        if (!isInside) continue;
+
+        const pinId = pin?.itemData?.id;
+        const title =
+          container.getAttribute("data-issue-title") ||
+          pin?.itemData?.label ||
+          (pinId ? tooltipState.titlesById[pinId] : null) ||
+          "Issue";
+        tooltipState.el.textContent = title;
+        tooltipState.el.style.left = `${ev.clientX + 12}px`;
+        tooltipState.el.style.top = `${ev.clientY + 12}px`;
+        tooltipState.el.style.display = "block";
+        return;
+      }
+    }
+
+    // In Forge Viewer, mousemove target can stay on a canvas wrapper.
+    // elementFromPoint gives the real top-most DOM element under cursor.
+    let el = document.elementFromPoint(ev.clientX, ev.clientY) || ev.target;
+    while (el && el !== document.body) {
+      const explicitTitle = el.getAttribute && el.getAttribute("data-issue-title");
+      if (explicitTitle) {
+        tooltipState.el.textContent = explicitTitle;
+        tooltipState.el.style.left = `${ev.clientX + 12}px`;
+        tooltipState.el.style.top = `${ev.clientY + 12}px`;
+        tooltipState.el.style.display = "block";
+        return;
+      }
+
+      if (el.id && tooltipState.titlesById[el.id]) {
+        const title = tooltipState.titlesById[el.id];
+        tooltipState.el.textContent = title;
+        tooltipState.el.style.left = `${ev.clientX + 12}px`;
+        tooltipState.el.style.top = `${ev.clientY + 12}px`;
+        tooltipState.el.style.display = "block";
+        return;
+      }
+      el = el.parentElement;
+    }
+
+    hideTooltip();
+  };
+
+  document.addEventListener(
+    "mousemove",
+    (ev) => {
+      tooltipState.latestEvent = ev;
+      if (tooltipState.rafPending) return;
+      tooltipState.rafPending = true;
+      window.requestAnimationFrame(update);
+    },
+    { passive: true }
+  );
+}
+
+function showIssuePushpinTooltip(title, clientX, clientY) {
+  ensureIssuePushpinTooltip();
+  if (!tooltipState.el) return;
+  tooltipState.el.textContent = title || "Issue";
+  tooltipState.el.style.left = `${clientX + 12}px`;
+  tooltipState.el.style.top = `${clientY + 12}px`;
+  tooltipState.el.style.display = "block";
+}
+
+function hideIssuePushpinTooltip() {
+  if (!tooltipState.el) return;
+  tooltipState.el.style.display = "none";
+}
+
+function syncPushpinContainerTitles(extension) {
+  const pushpins = extension?.pushPinManager?.pushPinList || [];
+  pushpins.forEach((pin) => {
+    const pinId = pin?.itemData?.id;
+    const hoverTitle =
+      pin?.itemData?.label || (pinId ? tooltipState.titlesById[pinId] : null) || "Issue";
+    if (pinId) tooltipState.titlesById[pinId] = hoverTitle;
+
+    const container = pin?.container;
+    if (!container) return;
+
+    container.setAttribute("data-issue-title", hoverTitle);
+    container.setAttribute("title", hoverTitle);
+    container.setAttribute("aria-label", hoverTitle);
+
+    if (!container.__issueHoverBound) {
+      container.__issueHoverBound = true;
+      container.addEventListener("mouseenter", (ev) => {
+        const t = container.getAttribute("data-issue-title") || hoverTitle;
+        showIssuePushpinTooltip(t, ev.clientX, ev.clientY);
+      });
+      container.addEventListener("mousemove", (ev) => {
+        const t = container.getAttribute("data-issue-title") || hoverTitle;
+        showIssuePushpinTooltip(t, ev.clientX, ev.clientY);
+      });
+      container.addEventListener("mouseleave", () => {
+        hideIssuePushpinTooltip();
+      });
+    }
+
+    container.querySelectorAll("*").forEach((el) => {
+      el.setAttribute("data-issue-title", hoverTitle);
+      el.setAttribute("title", hoverTitle);
+      el.setAttribute("aria-label", hoverTitle);
+    });
+  });
+}
+
 const params = new URLSearchParams(window.location.search);
 const userGuid = params.get("userGuid");
 const deviceType = params.get("deviceType");
@@ -390,15 +602,19 @@ export function initViewer(container) {
       viewer.setGroundReflection(false);
       viewer.setProgressiveRendering(true);
 
-      const models = viewer.impl.modelQueue().getModels();
+      const runHideGenericModels = () => {
+        if (typeof viewerFunctions.hideGenericModels !== "function") {
+          console.warn("hideGenericModels is unavailable; skipping.");
+          return;
+        }
+        const models = viewer.impl.modelQueue().getModels();
+        viewerFunctions.hideGenericModels(viewer, models);
+      };
 
-      viewer.addEventListener(Autodesk.Viewing.GEOMETRY_LOADED_EVENT, () =>
-        viewerFunctions.hideGenericModels(viewer, models),
-      );
+      viewer.addEventListener(Autodesk.Viewing.GEOMETRY_LOADED_EVENT, runHideGenericModels);
 
       [Autodesk.Viewing.ISOLATE_EVENT, Autodesk.Viewing.SHOW_ALL_EVENT].forEach(
-        (evt) =>
-          viewer.addEventListener(evt, () => viewerFunctions.hideGenericModels(viewer, models)),
+        (evt) => viewer.addEventListener(evt, runHideGenericModels),
       );
 
       resolve(viewer);
@@ -543,6 +759,54 @@ export async function pushpin_SelectOne(issueId, pushpin) {
   //pushpinExtension.loadItemsV2(pa);
   pushpinExtension.selectOne(issueId);
 }
+
+function attachPushpinHoverTitles(pushpins = [], attempt = 0, extension = null) {
+  if (!Array.isArray(pushpins) || pushpins.length === 0) return;
+
+  ensureIssuePushpinTooltip();
+  if (extension && !tooltipState.extensions.includes(extension)) {
+    tooltipState.extensions.push(extension);
+  }
+
+  let appliedCount = 0;
+
+  pushpins.forEach((pin) => {
+    if (!pin?.id) return;
+
+    const hoverTitle = pin.label || "Issue";
+    // Populate map for our tooltip overlay. Even if the DOM node isn't
+    // available yet, the map will be ready when it appears.
+    tooltipState.titlesById[pin.id] = hoverTitle;
+
+    const pushpinElement = document.getElementById(pin.id);
+    if (!pushpinElement) return;
+
+    
+
+    // The Autodesk pushpin UI is made of nested DOM nodes; depending on where the
+    // mouse lands, the hovered element might be a child (not the container).
+    // Setting `title` on all descendants ensures the browser tooltip shows reliably.
+    pushpinElement.setAttribute("title", hoverTitle);
+    pushpinElement.setAttribute("aria-label", hoverTitle);
+    const allDescendants = pushpinElement.querySelectorAll("*");
+    allDescendants.forEach((el) => {
+      el.setAttribute("title", hoverTitle);
+      el.setAttribute("aria-label", hoverTitle);
+    });
+    appliedCount++;
+  });
+
+  // Pushpin nodes are rendered asynchronously; retry briefly until available.
+  if (appliedCount < pushpins.length && attempt < 20) {
+    setTimeout(() => attachPushpinHoverTitles(pushpins, attempt + 1, extension), 150);
+  }
+
+  // Also bind titles to pushpin container nodes managed by the extension.
+  if (extension) {
+    syncPushpinContainerTitles(extension);
+  }
+}
+
 async function onGeometryLoaded(evt) {
   //load extension of pushpin
   //remove last items collection
@@ -563,6 +827,7 @@ async function onGeometryLoaded(evt) {
     viewerState: pushpinData.viewerState,
   });
   pushpinExtension.loadItemsV2(pushpin);
+  attachPushpinHoverTitles(pushpin, 0, pushpinExtension);
   pushpinExtension.selectOne(pushpinData.id);
 }
 async function onInitialGeometryLoaded(evt) {
@@ -635,6 +900,7 @@ async function onInitialGeometryLoaded(evt) {
     }
   });
   pushpinExt.loadItemsV2(pushpin);
+  attachPushpinHoverTitles(pushpin, 0, pushpinExt);
 
   $("#btn-create-issue").attr("disabled", false);
 }
@@ -1238,6 +1504,7 @@ export async function loadModelsandLoadOneIssue(
                 });
 
                 await ext.loadItemsV2(pushpin);
+                attachPushpinHoverTitles(pushpin, 0, ext);
 
                 console.log("Pushpin Manager", ext);
 
@@ -1486,6 +1753,17 @@ async function loadIssuePushpins(filter = {}) {
   viewerFunctions.workset(viewer);
   pushpinExt = await viewer.loadExtension("Autodesk.BIM360.Extension.PushPin");
 
+  // Ensure issue titles are applied to newly created pushpins.
+  if (!pushpinExt.__issueHoverTitlesCreatedBound) {
+    pushpinExt.__issueHoverTitlesCreatedBound = true;
+    pushpinExt.pushPinManager.addEventListener("pushpin.created", (e) => {
+      const itemData = e?.value?.itemData;
+      if (!itemData?.id) return;
+      const label = itemData.label || "Issue";
+      attachPushpinHoverTitles([{ id: itemData.id, label }], 0, pushpinExt);
+    });
+  }
+
   pushpinExt.pushPinManager.addEventListener(
     "pushpin.selected",
     async function (e) {
@@ -1556,6 +1834,7 @@ async function loadIssuePushpins(filter = {}) {
   });
   await pushpinExt.loadItemsV2(pushpin);
   await new Promise(res => setTimeout(res, 500)); // small delay for render
+  attachPushpinHoverTitles(pushpin, 0, pushpinExt);
   pushpinExt.showAll();
   viewer.impl.invalidate(true, true, true);
   console.log("Pushpin Manager", pushpin);
@@ -1568,6 +1847,18 @@ async function loadIssuePushpins(filter = {}) {
 export async function loadIssuePushpinsFiltered(issueStatus, issueSubtype) {
   console.log('Filter Issues Called');
   pushpinExt = await viewer.loadExtension("Autodesk.BIM360.Extension.PushPin");
+
+  // Ensure issue titles are applied to newly created pushpins.
+  if (!pushpinExt.__issueHoverTitlesCreatedBound) {
+    pushpinExt.__issueHoverTitlesCreatedBound = true;
+    pushpinExt.pushPinManager.addEventListener("pushpin.created", (e) => {
+      const itemData = e?.value?.itemData;
+      if (!itemData?.id) return;
+      const label = itemData.label || "Issue";
+      attachPushpinHoverTitles([{ id: itemData.id, label }], 0, pushpinExt);
+    });
+  }
+
   pushpinExt.pushPinManager.addEventListener(
     "pushpin.selected",
     async function (e) {
@@ -1622,6 +1913,7 @@ export async function loadIssuePushpinsFiltered(issueStatus, issueSubtype) {
     }
   });
   pushpinExt.loadItemsV2(pushpin);
+  attachPushpinHoverTitles(pushpin, 0, pushpinExt);
   console.log("Pushpin Manager", pushpin);
   loadIssuesListFiltered(selectedProject, pushpin);
 }
