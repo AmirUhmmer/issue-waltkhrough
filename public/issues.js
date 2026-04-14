@@ -309,10 +309,9 @@ export async function populateIssueList(parent, issues) {
   let issueList = [];
   $(parent).empty();
   $.each(issues, (index, issue) => {
-    const issue_a = $(`<a>`);
-    issue_a.attr("href", "#");
-    issue_a.attr("id", `issue-${issue.id}`);
-    issue_a.attr("class", "list-group-item list-group-item-action");
+    const issue_div = $(`<div class="sub-icon">`);
+    issue_div.attr("id", `issue-${issue.id}`);
+    issue_div.attr("style", "cursor: pointer;");
 
     const statusColor = {
       open: "bg-warning",
@@ -321,24 +320,28 @@ export async function populateIssueList(parent, issues) {
       pending: "bg-primary",
       in_review: "bg-info",
     };
-    const issue_div = `<div class="d-flex w-100 justify-content-between">
-                            <h5 class="mb-1">${issue.title}</h5>
-                         </div>
-                          <p class="mb-1"><span class="badge ${
-                            statusColor[issue.status]
-                          }">${issue.status}</span></p>
-                          <small>Issue #${issue.displayId}</small>
-                          `;
+    
+    const issue_content = `<div class="d-block justify-content-between">
+        <div class="d-flex">
+          <h6 class="mb-1 fw-bold">#${issue.displayId} - ${issue.title}</h6>
+        </div>
+        <div class="d-flex" style="height: 20px; align-items: center;">
+          <div style="border-radius: 5px; width: 5px; height: 20px;" class="${statusColor[issue.status] || 'bg-secondary'}"></div>
+          <small class="ms-1">${issue.status} &middot;</small>
+          ${issue.linkedDocuments && issue.linkedDocuments.length > 0 ? 
+            `<small class="ms-2">Level: ${getLevelNameForIssue(issue)}</small>` : ''}
+        </div>
+      </div>`;
 
-    issue_a.append(issue_div);
-    issueList.push(issue_a);
+    issue_div.append(issue_content);
+    issueList.push(issue_div);
   });
 
   $(parent).append(issueList);
 
   $.each(issues, (index, issue) => {
     $(`#issue-${issue.id}`).on("click", function () {
-      $("#issue-list .list-group-item").removeClass("active");
+      $("#issues-sidebar-items .sub-icon").removeClass("active");
       $(this).addClass("active");
       const pushpinData =
         issue.linkedDocuments.length > 0 ? issue.linkedDocuments[0] : null;
@@ -357,3 +360,31 @@ export async function populateIssueList(parent, issues) {
     });
   });
 }
+
+function getLevelNameForIssue(issue) {
+  if (!issue.linkedDocuments || issue.linkedDocuments.length === 0) return 'N/A';
+  
+  const pushpinDetails = issue.linkedDocuments[0].details;
+  if (!pushpinDetails || !pushpinDetails.position) return 'N/A';
+  
+  // This function will be available from viewer.js when loaded
+  if (typeof getLevelForPosition === 'function') {
+    const levelId = getLevelForPosition(pushpinDetails.position);
+    const level = window.availableLevels ? window.availableLevels.find(l => l.id === levelId) : null;
+    return level ? level.name : 'Unknown';
+  }
+  
+  return 'N/A';
+}
+
+// Make functions globally available for viewer.js
+window.getAllIssues = getAllIssues;
+window.getIssuesFiltered = getIssuesFiltered;
+window.createIssue_v2 = createIssue_v2;
+window.getIssueSubTypesData = getIssueSubTypesData;
+window.initIssueDefs = initIssueDefs;
+window.createIssue = createIssue;
+window.createComment = createComment;
+window.createAttachment = createAttachment;
+window.prepareBIMIssuesTree = prepareBIMIssuesTree;
+window.populateIssueList = populateIssueList;

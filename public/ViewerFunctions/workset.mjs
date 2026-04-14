@@ -143,7 +143,14 @@ export function showWorksetPanel(viewer) {
           item.classList.add("active");
           activeItem = item;
 
+          // Isolate model level
           filterByWorkset(worksetName, viewer);
+          
+          // Filter issues for this level
+          if (typeof window.filterIssuesByLevel === 'function') {
+            console.log("Filtering issues for level:", worksetName);
+            window.filterIssuesByLevel(worksetName);
+          }
         };
 
         container.appendChild(item);
