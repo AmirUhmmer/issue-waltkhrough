@@ -338,22 +338,63 @@ export async function getOneProject(projectId) {
 
   console.log(project);
   //const project = oneProject[0];
-  
+
   const folders = await getFolderContents(mainHub.id, project.id);
 
-  const mainFolder = folders[0];
-  
-  const items = await getFolderContents(
-    mainHub.id,
-    project.id,
-    mainFolder.id
-  );
-  const itemFilter = items.filter(item => item.type === "items" &&  item.attributes.displayName.toLowerCase().endsWith(".rvt"));
+  const projectFilesFolder = folders.find((f) => {
+    const name = f?.attributes?.displayName || f?.attributes?.name || "";
+    return typeof name === "string" && name.toLowerCase().includes("project files");
+  });
 
+  const rootFolder = projectFilesFolder || folders[0];
+  if (!rootFolder?.id) {
+    return [];
+  }
+
+  const visitedFolderIds = new Set();
+  const allItems = [];
+
+  async function collectItems(folderId, depth) {
+    if (!folderId || visitedFolderIds.has(folderId) || depth > 6) {
+      return;
+    }
+    visitedFolderIds.add(folderId);
+
+    const contents = await getFolderContents(mainHub.id, project.id, folderId);
+    for (const entry of contents) {
+      if (entry.type === "folders") {
+        await collectItems(entry.id, depth + 1);
+      } else if (entry.type === "items") {
+        allItems.push(entry);
+      }
+    }
+  }
+
+  await collectItems(rootFolder.id, 0);
+
+  const MODEL_EXTS = [".rvt", ".ifc", ".nwd", ".nwf", ".dwg", ".dxf", ".rfa"];
+  const hasRevit = allItems.some((i) =>
+    (i?.attributes?.displayName || "").toLowerCase().endsWith(".rvt")
+  );
+
+  let itemFilter = allItems;
+  if (hasRevit) {
+    itemFilter = allItems.filter((i) =>
+      (i?.attributes?.displayName || "").toLowerCase().endsWith(".rvt")
+    );
+  } else {
+    const withKnownExt = allItems.filter((i) => {
+      const name = (i?.attributes?.displayName || "").toLowerCase();
+      return MODEL_EXTS.some((ext) => name.endsWith(ext));
+    });
+    if (withKnownExt.length > 0) {
+      itemFilter = withKnownExt;
+    }
+  }
 
   return itemFilter.map(async (item) => {
     const versions = await getVersionsList(mainHub.id, project.id, item.id);
-    return Object.assign(item, {"latestVersion" : versions[0]})
+    return Object.assign(item, { "latestVersion": versions[0] });
   });
 
   //return await itemFilter;
