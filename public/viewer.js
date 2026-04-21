@@ -876,6 +876,7 @@ async function onInitialGeometryLoaded(evt) {
 
   console.log("Selected: ", selectedProject);
   let allIssues = await getAllIssues(selectedProject, filter);
+  allIssues = Array.isArray(allIssues) ? allIssues.filter((issue) => issue.status === "open") : [];
 
   //console.log({ allIssues });
 
@@ -907,86 +908,37 @@ async function onInitialGeometryLoaded(evt) {
   pushpinExt.loadItemsV2(pushpin);
   attachPushpinHoverTitles(pushpin, 0, pushpinExt);
 
-  // Initialize level filtering
-  console.log("About to call initializeLevelFiltering with", allIssues.length, "issues");
-  
-  // Quick test to verify dropdown exists
-  console.log("jQuery ready:", typeof $ !== 'undefined');
-  console.log("Document ready:", document.readyState);
-  
-  const testDropdown = $("#level-filter");
-  console.log("Test dropdown found:", testDropdown.length > 0 ? "YES" : "NO");
-  if (testDropdown.length > 0) {
-    console.log("Current dropdown HTML:", testDropdown.html());
-    // Try manual population
-    testDropdown.empty();
-    testDropdown.append('<option value="">All Levels</option>');
-    testDropdown.append('<option value="test1">Test Level 1</option>');
-    testDropdown.append('<option value="test2">Test Level 2</option>');
-    console.log("After manual test - dropdown HTML:", testDropdown.html());
-  } else {
-    console.log("Dropdown not found, trying alternative selector");
-    const altDropdown = document.getElementById("level-filter");
-    console.log("getElementById found:", altDropdown ? "YES" : "NO");
-    if (altDropdown) {
-      altDropdown.innerHTML = '<option value="">All Levels</option><option value="test1">Test Level 1</option><option value="test2">Test Level 2</option>';
-      console.log("Manual DOM manipulation completed");
-    }
+  const showClosedCheckbox = document.getElementById('show-closed-issues');
+  if (showClosedCheckbox) {
+    showClosedCheckbox.checked = false;
   }
-  
-  await initializeLevelFiltering(allIssues);
 
-  // Fallback: Ensure dropdown has options after a delay
-  setTimeout(() => {
-    const dropdown = $("#level-filter");
-    if (dropdown.length > 0 && dropdown.find("option").length <= 1) {
-      console.log("Fallback: Dropdown still only has 'All Levels', adding test options");
-      dropdown.empty();
-      dropdown.append('<option value="">All Levels</option>');
-      dropdown.append('<option value="ground">Ground Floor</option>');
-      dropdown.append('<option value="first">First Floor</option>');
-      dropdown.append('<option value="second">Second Floor</option>');
-      dropdown.append('<option value="roof">Roof Level</option>');
-      console.log("Fallback dropdown HTML:", dropdown.html());
-    }
-  }, 3000);
-
-  $("#btn-create-issue").attr("disabled", false);
-}
-async function onGeometryIssueLoad(evt) {
-  pushpinIssueExt = await viewer.loadExtension(
-    "Autodesk.BIM360.Extension.PushPin"
-  );
-
-  pushpinIssueExt.startCreateItem({
-    label: "New Issue",
-    status: "open",
-    type: "issues",
-  });
-
-  pushpinIssueExt.pushPinManager.addEventListener(
-    "pushpin.created",
-    function (e) {
-      pushpinIssueExt.endCreateItem();
-      console.log({ e });
-      const newIssue = e.value.itemData;
-      pushpinIssueExt.setDraggableById(newIssue.id, true);
-      //console.log(viewer.selectedItem);
-    }
-  );
+  if (typeof performFilteringWithGetAllIssues === 'function') {
+    await performFilteringWithGetAllIssues('');
+  }
+  // const urn = window.btoa(item.id).replace(/=/g, "");
+  // Autodesk.Viewing.Document.load(
+  //   "urn:" + urn,
+  //   onDocumentLoadSuccess,
+  //   onDocumentLoadFailure
+  // );
 }
 
-async function startCreatePushPin() {
-  alert("Click on one of the object in the Viewer");
-  pushpinExt.startCreateItem({ label: "New", status: "open", type: "issues" });
-}
-// Export for viewer pages
 export async function loadModelAndIssues(viewer, item, projectId) {
   selectedProjectItem = item;
   selectedProject = projectId;
   loadedModelCounter = 0;
   await getProjectModels(projectId);
   await loadIssuesList(projectId);
+
+  const showClosedCheckbox = document.getElementById('show-closed-issues');
+  if (showClosedCheckbox) {
+    showClosedCheckbox.checked = false;
+  }
+
+  if (typeof performFilteringWithGetAllIssues === 'function') {
+    await performFilteringWithGetAllIssues('');
+  }
   // const urn = window.btoa(item.id).replace(/=/g, "");
   // Autodesk.Viewing.Document.load(
   //   "urn:" + urn,
@@ -1140,11 +1092,7 @@ async function getProjectModels(containerId) {
 //     return new Promise((resolve, reject) => {
 //       const geometry = doc.getRoot().getDefaultGeometry();
 //       const loadOptions = {
-//         keepCurrentModels: true,
-//         applyRefPoint: true,
-//         skipHiddenFragments: true,
-//         // globalOffset: { x: 0, y: 0, z: 0 }
-//         ...(modelsLoaded > 0 && { globalOffset: offset }),
+//         keepCurrentModels: true, // Keeps existing models in the viewer
 //       };
 //       // const loadOptions = {
 //       //   keepCurrentModels: true,
@@ -1855,9 +1803,10 @@ async function loadIssuePushpins(filter = {}) {
   //   "filter[linkedDocumentUrn]": selectedProjectItem.relationships.item.data.id,
   // };
 
-  var pushpin = [];
+  let pushpin = [];
   console.log("Selected Project for Pushpins", selectedProject);
-  const allIssues = await getAllIssues(selectedProject);
+  let allIssues = await getAllIssues(selectedProject);
+  allIssues = Array.isArray(allIssues) ? allIssues.filter((issue) => issue.status === "open") : [];
   console.log('All Issues', allIssues)
   $.each(allIssues, (index, issue) => {
     //  console.log(issue);
@@ -1866,45 +1815,22 @@ async function loadIssuePushpins(filter = {}) {
         ? issue.linkedDocuments[0].details
         : null;
 
-    if (pushpinDetails && pushpinDetails.objectId) {
-      // #region: bandaid solution
-      // BS19 filter
-      if (selectedProject == "1c8224f1-b860-4a2b-821b-d393c94b190d") {
-        console.log('Issue for project check', selectedProject);
-        if (issue.issueTypeId == "318b5e55-0eef-4d61-9059-927fd4d40134" || issue.issueTypeId == "318b5e55-0eef-4d61-9059-927fd4d40134") {
-          console.log('Issue for test');
-          pushpin.push({
-            type: "issues",
-            id: issue.id,
-            label: `#${issue.displayId} - ${issue.title}`,
-            status: issue.status,
-            position: pushpinDetails.position,
-            objectId: pushpinDetails.objectId,
-            viewerState: pushpinDetails.viewerState,
-          });
-        }
-      }
-      else {
-        pushpin.push({
-          type: "issues",
-          id: issue.id,
-          label: `#${issue.displayId} - ${issue.title}`,
-          status: issue.status,
-          position: pushpinDetails.position,
-          objectId: pushpinDetails.objectId,
-          viewerState: pushpinDetails.viewerState,
-        });
-      }
-      // #endregion
-
+    if (pushpinDetails && pushpinDetails.position) {
+      pushpin.push({
+        type: "issues",
+        id: issue.id,
+        label: `#${issue.displayId} - ${issue.title}`,
+        status: issue.status,
+        position: pushpinDetails.position,
+        objectId: pushpinDetails.objectId,
+        viewerState: pushpinDetails.viewerState,
+      });
     }
   });
-  await pushpinExt.loadItemsV2(pushpin);
-  await new Promise(res => setTimeout(res, 500)); // small delay for render
+  pushpinExt.loadItemsV2(pushpin);
   attachPushpinHoverTitles(pushpin, 0, pushpinExt);
-  pushpinExt.showAll();
-  viewer.impl.invalidate(true, true, true);
   console.log("Pushpin Manager", pushpin);
+  loadIssuesListFiltered(selectedProject, pushpin);
 }
 // #endregion
 
@@ -1951,15 +1877,16 @@ export async function loadIssuePushpinsFiltered(issueStatus, issueSubtype) {
   //   "filter[linkedDocumentUrn]": selectedProjectItem.relationships.item.data.id,
   // };
 
-  var pushpin = [];
+  let pushpin = [];
   console.log("Selected Project for Pushpins", selectedProject);
   const filter = {};
   if (issueStatus) filter.status = issueStatus;
   if (issueSubtype) filter.issueSubtypeId = issueSubtype;
   
   const allIssues = await getIssuesFiltered(selectedProject, filter);
-  console.log('All Issues', allIssues)
-  $.each(allIssues, (index, issue) => {
+  const openOnlyIssues = Array.isArray(allIssues) ? allIssues.filter((issue) => issue.status === "open") : [];
+  console.log('All Issues', openOnlyIssues)
+  $.each(openOnlyIssues, (index, issue) => {
     //  console.log(issue);
     const pushpinDetails =
       issue.linkedDocuments.length > 0
@@ -1975,8 +1902,6 @@ export async function loadIssuePushpinsFiltered(issueStatus, issueSubtype) {
         position: pushpinDetails.position,
         objectId: pushpinDetails.objectId,
         viewerState: pushpinDetails.viewerState,
-        customAttributes: issue.customAttributes,
-        displayId: issue.displayId 
       });
     }
   });
@@ -1992,7 +1917,13 @@ async function loadIssuesListFiltered(containerId, pushpin) {
   const divIssueSidebar = document.getElementById("issues-sidebar-items");
   divIssueSidebar.innerHTML = "";
   //console.log(allIssues);
-    $.each(pushpin, (index, issue) => {
+
+  const issues = pushpin;
+  // console.log("Issues", issues);
+  $.each(issues, (index, issue) => {
+    if (issue.status !== "open") {
+      return;
+    }
     const divSubIcon = document.createElement("div");
     const customAttributes = issue.customAttributes;
     const findHemyXLink = customAttributes.filter(
@@ -2070,7 +2001,7 @@ async function loadIssuesListFiltered(containerId, pushpin) {
 
     divSubIcon.onclick = (event) => {
       pushpinExt.selectOne(issue.id);
-      $.each(pushpin, (index, issue_subicon) => {
+      $.each(issues, (index, issue_subicon) => {
         const subicon = document.getElementById(
           `div-issue-subicon-${issue_subicon.id}`
         );
@@ -2111,6 +2042,7 @@ async function loadIssuesList(containerId) {
   } catch (error) {
     console.error("Error getting issues:", error);
   }
+  issues = Array.isArray(issues) ? issues.filter((issue) => issue.status === "open") : [];
   // console.log("Issues", issues);
   $.each(issues, (index, issue) => {
     // ! BS19
@@ -2652,12 +2584,6 @@ export async function navigateHAFL(viewer, ha, fl) {
   }
 }
 
-
-
-
-// http://localhost:8080/pages/viewer/?useOPFS=true&containerId=bf8f603c-7e37-4367-9900-69e279377191&mode=viewIssues&userGuid=35fb5799-aaff-4225-9344-1faa6c3d810d&hardAsset=9915efcf-d42f-ef11-840b-0022489fdfca&FL=9220dd8b-3861-ee11-8df0-0022489fd3f3
-// #endregion
-
 // Helper function to map workset level names to issue level names
 function mapLevelName(worksetLevelName) {
   if (!worksetLevelName) return worksetLevelName;
@@ -2717,41 +2643,72 @@ async function initializeLevelFiltering(allIssues) {
     // Fallback: Create levels based on issue Z-coordinates
     if (levels.length === 0) {
       console.log("Using fallback level detection based on issue positions");
-      levels = createLevelsFromIssuePositions(allIssues);
+      
+      // Extract Z-coordinates from all issues
+      const zCoordinates = [];
+      allIssues.forEach((issue, index) => {
+        if (issue.linkedDocuments && issue.linkedDocuments.length > 0) {
+          const pushpinDetails = issue.linkedDocuments[0].details;
+          if (pushpinDetails && pushpinDetails.position) {
+            const z = pushpinDetails.position.z || pushpinDetails.position[2] || 0;
+            zCoordinates.push(z);
+            console.log(`Issue ${index + 1} (${issue.id}): Z = ${z}`);
+          } else {
+            console.log(`Issue ${index + 1} (${issue.id}): No position data`);
+          }
+        } else {
+          console.log(`Issue ${index + 1} (${issue.id}): No linked documents`);
+        }
+      });
+      
+      if (zCoordinates.length === 0) {
+        console.log("No Z-coordinates found in issues");
+        return [];
+      }
+      
+      // Sort and group Z-coordinates into levels
+      zCoordinates.sort((a, b) => a - b);
+      console.log("Z-coordinates found:", zCoordinates);
+      
+      // Create levels by grouping similar Z-coordinates
+      const levels = [];
+      const tolerance = 2; // 2 units tolerance for same level
+      
+      zCoordinates.forEach((z, index) => {
+        // Check if this Z-coordinate is close to an existing level
+        const existingLevel = levels.find(level => Math.abs(z - level.elevation) <= tolerance);
+        
+        if (!existingLevel) {
+          // Create a new level
+          const levelName = `Level ${levels.length + 1}`;
+          levels.push({
+            id: `level-${levels.length}`,
+            name: levelName,
+            elevation: z
+          });
+          console.log(`Created new level: ${levelName} (${levelId}) at elevation ${z}`);
+        } else {
+          console.log(`Z=${z} assigned to existing level: ${existingLevel.name} (elevation=${existingLevel.elevation})`);
+        }
+      });
+      
+      // Set global levels
+      window.availableLevels = levels;
+      console.log(`Created ${levels.length} levels:`, window.availableLevels);
+      
+      // Show level statistics
+      console.log("Level creation summary:");
+      levels.forEach((level, index) => {
+        const issuesAtLevel = zCoordinates.filter(z => Math.abs(z - level.elevation) <= tolerance);
+        console.log(`  ${level.name}: elevation=${level.elevation}, issues=${issuesAtLevel.length}`);
+      });
+      
+      // Update the dropdown with the new levels
+      updateDropdownWithLevels();
     }
     
-    if (levels.length > 0) {
-      window.availableLevels = levels.map((floor, index) => ({
-        id: floor.id || `level-${index}`,
-        name: floor.name || floor.title || `Level ${index + 1}`,
-        elevation: floor.elevation || floor.level || index
-      }));
-      
-      console.log("Available levels:", window.availableLevels);
-      
-      // Populate level filter dropdown
-      populateLevelFilter();
-      
-      // Refresh workset panel to show the real levels
-      refreshWorksetPanel();
-      
-      // Also try a delayed refresh in case the panel isn't ready yet
-      setTimeout(() => {
-        console.log("Delayed workset panel refresh...");
-        refreshWorksetPanel();
-      }, 1000);
-      
-      // Add event listener for level filter changes
-      $("#level-filter").off("change").on("change", function() {
-        const selectedLevel = $(this).val();
-        console.log("Level filter changed to:", selectedLevel);
-        filterIssuesByLevel(selectedLevel);
-      });
-    } else {
-      console.warn("No levels found from any source");
-      // Don't create test levels - let the filtering system handle it
-      window.availableLevels = [];
-    }
+    // Update the dropdown with the new levels
+    updateDropdownWithLevels();
   } catch (error) {
     console.error("Error initializing level filtering:", error);
   }
@@ -2820,12 +2777,12 @@ function createLevelsFromIssuePositions(allIssues) {
         if (pushpinDetails && pushpinDetails.position) {
           const z = pushpinDetails.position.z || pushpinDetails.position[2] || 0;
           zCoordinates.push(z);
-          console.log(`Issue ${index + 1} (${issue.id}): Z = ${z}`);
+          console.log(`Issue ${index + 1}: Z = ${z}`);
         } else {
-          console.log(`Issue ${index + 1} (${issue.id}): No position data`);
+          console.log(`Issue ${index + 1}: No position data`);
         }
       } else {
-        console.log(`Issue ${index + 1} (${issue.id}): No linked documents`);
+        console.log(`Issue ${index + 1}: No linked documents`);
       }
     });
     
@@ -2878,8 +2835,6 @@ function createLevelsFromIssuePositions(allIssues) {
   }
 }
 
-// ...
-
 function filterByWorkset(worksetName, viewer) {
 
   worksetCache.forEach((modelMap, model) => {
@@ -2913,8 +2868,10 @@ async function performFiltering(levelId) {
       console.error("Error getting issues:", error);
     }
     
+    allIssues = Array.isArray(allIssues) ? allIssues.filter((issue) => issue.status === "open") : [];
+
     // Get checkbox state for showing closed issues
-    const showClosedIssues = document.getElementById('show-closed-issues')?.checked ?? false;
+    const showClosedIssues = false;
     console.log("Show closed issues:", showClosedIssues);
     
     // Filter issues by level and status
@@ -3096,7 +3053,7 @@ async function performFilteringWithGetAllIssues(levelId) {
     console.log(`Looking for levelId: ${levelId}`);
     
     // Get checkbox state for showing closed issues
-    const showClosedIssues = document.getElementById('show-closed-issues')?.checked ?? false;
+    const showClosedIssues = false;
     console.log("Show closed issues:", showClosedIssues);
     
     // Filter issues by level and status
