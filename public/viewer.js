@@ -1925,7 +1925,7 @@ async function loadIssuesListFiltered(containerId, pushpin) {
       return;
     }
     const divSubIcon = document.createElement("div");
-    const customAttributes = issue.customAttributes;
+    const customAttributes = Array.isArray(issue.customAttributes) ? issue.customAttributes : [];
     const findHemyXLink = customAttributes.filter(
       (attributes) => attributes.title === "Hemy X Link"
     );
@@ -3149,6 +3149,44 @@ async function performFilteringWithGetAllIssues(levelId) {
     console.log(`Matches found: ${matchCount}`);
     console.log(`Issues skipped: ${skipCount}`);
     console.log(`Final filtered issues: ${filteredIssues.length}`);
+
+    try {
+      const selectedLevel = levelId || "";
+      const mappedSelectedLevel = levelId ? mapLevelName(levelId) : "";
+      const rows = filteredIssues.slice(0, 50).map((issue) => {
+        const pushpinDetails = issue.linkedDocuments && issue.linkedDocuments.length > 0
+          ? issue.linkedDocuments[0].details
+          : null;
+        const position = pushpinDetails?.position || null;
+        const detectedLevel = position
+          ? getLevelForPosition(position)
+          : "";
+
+        return {
+          id: issue.id,
+          displayId: issue.displayId,
+          status: issue.status,
+          title: issue.title,
+          detectedLevel,
+          x: position?.x,
+          y: position?.y,
+          z: position?.z,
+          selectedLevel,
+          mappedSelectedLevel,
+        };
+      });
+
+      console.groupCollapsed(
+        `[ACTIVE ISSUES] ${filteredIssues.length} open issue(s) for level="${selectedLevel || "All Levels"}"`
+      );
+      console.table(rows);
+      if (filteredIssues.length > rows.length) {
+        console.log(`Showing first ${rows.length} rows (total=${filteredIssues.length}).`);
+      }
+      console.groupEnd();
+    } catch (logError) {
+      console.warn("Failed to print active issues table:", logError);
+    }
     
     // Update pushpins with filtered issues
     await updatePushpinsWithFilteredIssues(filteredIssues);
