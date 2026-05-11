@@ -129,6 +129,11 @@ async function main() {
 
   // --- Listen to parent window messages ---
   window.addEventListener("message", async (event) => {
+    // Filter out empty or invalid messages
+    if (!event.data || (typeof event.data === 'object' && Object.keys(event.data).length === 0)) {
+      return;
+    }
+    
     if (!src) src = { srcWin: event.source, srcOrigin: event.origin };
     console.log("Message received:", event.data);
 
@@ -207,16 +212,30 @@ async function handleLogin(onSuccess) {
 
   const loginWindow = window.open(ssoUrl, "Login", "width=600,height=600");
 
-  window.addEventListener("message", (event) => {
+  // Create a named function for the login handler so we can remove it later
+  const loginMessageHandler = (event) => {
     if (event.origin !== window.location.origin) return;
     const { token, refreshToken, expires_at, internal_token } = event.data;
     if (!token) return;
+
+    // Remove the listener immediately after handling the login
+    window.removeEventListener("message", loginMessageHandler);
 
     const tokens = { token, refreshToken, expires_at, internal_token };
     saveTokens(tokens);
     loginWindow?.close();
     onSuccess(tokens);
-  });
+  };
+
+  window.addEventListener("message", loginMessageHandler);
+
+  // Clean up the login window if it's closed manually
+  const checkClosed = setInterval(() => {
+    if (loginWindow?.closed) {
+      clearInterval(checkClosed);
+      window.removeEventListener("message", loginMessageHandler);
+    }
+  }, 1000);
 }
 
 // --- After successful login (no reload) ---
