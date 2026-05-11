@@ -1462,7 +1462,7 @@ export async function loadModelsandCreateIssue(viewer, projectId, srcParam) {
 }
 
 
-async function loadModelsandLoadOneIssue(
+export async function loadModelsandLoadOneIssue(
   viewer,
   projectId,
   issueDetails,
