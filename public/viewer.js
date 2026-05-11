@@ -2868,10 +2868,11 @@ async function performFiltering(levelId) {
       console.error("Error getting issues:", error);
     }
     
-    allIssues = Array.isArray(allIssues) ? allIssues.filter((issue) => issue.status === "open") : [];
+    allIssues = Array.isArray(allIssues) ? allIssues : [];
 
     // Get checkbox state for showing closed issues
-    const showClosedIssues = false;
+    const showClosedCheckbox = document.getElementById('show-closed-issues');
+    const showClosedIssues = showClosedCheckbox ? showClosedCheckbox.checked : false;
     console.log("Show closed issues:", showClosedIssues);
     
     // Filter issues by level and status
@@ -2879,7 +2880,7 @@ async function performFiltering(levelId) {
       allIssues.filter(issue => {
         // Check status based on checkbox
         if (!showClosedIssues && issue.status !== 'open') return false;
-        if (showClosedIssues && issue.status !== 'open' && issue.status !== 'closed') return false;
+        if (showClosedIssues && issue.status !== 'closed') return false;
         
         const pushpinDetails = issue.linkedDocuments.length > 0 
           ? issue.linkedDocuments[0].details 
@@ -2890,7 +2891,7 @@ async function performFiltering(levelId) {
         const issueLevel = getLevelForPosition(pushpinDetails.position);
         return issueLevel === levelId;
       }) : showClosedIssues 
-        ? allIssues.filter(issue => issue.status === 'open' || issue.status === 'closed')
+        ? allIssues.filter(issue => issue.status === 'closed')
         : allIssues.filter(issue => issue.status === 'open');
     
     // Update pushpins with filtered issues
@@ -2910,6 +2911,8 @@ async function performFilteringWithGetAllIssues(levelId) {
     console.log("=== DEBUGGING performFilteringWithGetAllIssues ===");
     console.log("Level ID:", levelId);
     console.log("Using getAllIssues function to get issues...");
+    
+    // Debug checkbox state - will be checked after variables are declared
     
     // Try to get issues without the filter first
     let allIssues = [];
@@ -3053,7 +3056,11 @@ async function performFilteringWithGetAllIssues(levelId) {
     console.log(`Looking for levelId: ${levelId}`);
     
     // Get checkbox state for showing closed issues
-    const showClosedIssues = false;
+    const showClosedCheckbox = document.getElementById('show-closed-issues');
+    const showClosedIssues = showClosedCheckbox ? showClosedCheckbox.checked : false;
+    console.log("=== CHECKBOX STATE DEBUG ===");
+    console.log("Checkbox element found:", !!showClosedCheckbox);
+    console.log("Checkbox checked state:", showClosedCheckbox?.checked);
     console.log("Show closed issues:", showClosedIssues);
     
     // Filter issues by level and status
@@ -3082,8 +3089,14 @@ async function performFilteringWithGetAllIssues(levelId) {
             skipCount++;
             return false;
           }
+        } else {
+          // When showClosedIssues is checked, show ONLY closed issues
+          if (issue.status !== 'closed') {
+            console.log(`STATUS FILTER: Skipping issue ${issue.id} - status is ${issue.status} (only closed allowed)`);
+            skipCount++;
+            return false;
+          }
         }
-        // When showClosedIssues is checked, show ALL statuses (no filtering)
         
         const pushpinDetails = issue.linkedDocuments && issue.linkedDocuments.length > 0 
           ? issue.linkedDocuments[0].details 
@@ -3131,11 +3144,17 @@ async function performFilteringWithGetAllIssues(levelId) {
             skipCount++;
             return false;
           }
+        } else {
+          // When showClosedIssues is checked, show ONLY closed issues
+          if (issue.status !== 'closed') {
+            console.log(`STATUS FILTER: Skipping issue ${issue.id} - status is ${issue.status} (only closed allowed)`);
+            skipCount++;
+            return false;
+          }
         }
-        // When showClosedIssues is checked, show ALL statuses (no filtering)
         
         if (showClosedIssues) {
-          console.log(`STATUS OK: Issue ${issue.id} - status is ${issue.status} (all statuses allowed)`);
+          console.log(`STATUS OK: Issue ${issue.id} - status is ${issue.status} (closed only)`);
         } else {
           console.log(`STATUS OK: Issue ${issue.id} - status is ${issue.status} (open only)`);
         }
@@ -3368,8 +3387,15 @@ function updateDropdownWithLevels() {
       }
     });
   }
-  
-  // Add event listener for show/hide closed issues checkbox
+}
+
+window.performFilteringWithGetAllIssues = performFilteringWithGetAllIssues;
+window.filterIssuesByLevel = filterIssuesByLevel;
+window.updateDropdownWithLevels = updateDropdownWithLevels;
+
+// Setup checkbox event listener immediately when DOM is ready
+function setupCheckboxListener() {
+  console.log("Setting up checkbox listener...");
   const showClosedCheckbox = document.getElementById('show-closed-issues');
   console.log("Checkbox found:", !!showClosedCheckbox);
   console.log("Checkbox initial checked state:", showClosedCheckbox?.checked);
@@ -3383,24 +3409,38 @@ function updateDropdownWithLevels() {
       // Trigger filtering with current level to update display - use same function as dropdown
       const currentLevel = document.getElementById('level-filter')?.value || '';
       console.log("Calling performFilteringWithGetAllIssues with level:", currentLevel);
+      console.log("performFilteringWithGetAllIssues available:", typeof performFilteringWithGetAllIssues);
+      console.log("window.performFilteringWithGetAllIssues available:", typeof window.performFilteringWithGetAllIssues);
       
       if (typeof performFilteringWithGetAllIssues === 'function') {
+        console.log("Calling performFilteringWithGetAllIssues directly...");
         performFilteringWithGetAllIssues(currentLevel);
       } else if (window.performFilteringWithGetAllIssues) {
         console.log("Calling window.performFilteringWithGetAllIssues...");
         window.performFilteringWithGetAllIssues(currentLevel);
       } else {
         console.error("Filtering function not available for checkbox!");
+        console.log("Available functions:", Object.keys(window).filter(key => key.includes('filter')));
       }
     });
+    console.log("Checkbox event listener attached successfully!");
   } else {
     console.error("Show closed issues checkbox not found!");
   }
 }
 
-window.performFilteringWithGetAllIssues = performFilteringWithGetAllIssues;
-window.filterIssuesByLevel = filterIssuesByLevel;
-window.updateDropdownWithLevels = updateDropdownWithLevels;
+// Run setup immediately and also try again after DOM is ready
+setupCheckboxListener();
+
+// Also try after DOM is fully loaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setupCheckboxListener);
+} else {
+  setupCheckboxListener();
+}
+
+// Also try after window loads to be absolutely sure
+window.addEventListener('load', setupCheckboxListener);
 
 // Main filtering function called from dropdown and workset panel
 async function filterIssuesByLevel(levelId) {
