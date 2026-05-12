@@ -17,7 +17,7 @@
     "better-sqlite3": "^11.8.1",
     "cookie-session": "^2.0.0",
     "cors": "^2.8.5",
-    "docker": "^0.2.14",
+    "docker": "^1.0.0",
     "dotenv": "^16.4.7",
     "easyxdm": "^2.4.19-pre.2",
     "express": "^4.21.2",
@@ -38,7 +38,7 @@
     "playwright": "^1.49.1",
     "playwright-stealth": "^0.0.1",
     "puppeteer": "^23.11.1",
-    "sqlite3": "^5.1.7",
+    "sqlite3": "^6.0.1",
     "websocket": "^1.0.35",
     "ws": "^8.18.1"
   },
