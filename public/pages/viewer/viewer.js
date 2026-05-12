@@ -14,9 +14,9 @@ import {
 } from "../../issues.js";
 import { getMetadata } from "../../modelderivative.js";
 import * as viewerFunctions from "../../ViewerFunctions/workset.mjs";
-
+ 
 let viewer = null;
-
+ 
 const params = new URLSearchParams(window.location.search);
 const containerId = params.get("containerId");
 const mode = params.get("mode");
@@ -24,7 +24,7 @@ const userGuid = params.get("userGuid");
 const deviceType = params.get("deviceType");
 const hardAsset = params.get("hardAsset");
 const functionalLocation = params.get("floc");
-
+ 
 const login = document.getElementById("login");
 const divMain = document.getElementById("div-main");
 const divLoading = document.getElementById("div-loading");
@@ -33,18 +33,18 @@ const divHeader = document.getElementById("header");
 const issueReportingForm = document.getElementById("form-issue-report");
 const viewerDiv = document.querySelector(".adsk-viewing-viewer");
 const preview = document.getElementById("preview");
-
+ 
 function setupSidebarListeners(viewer) {
   document.querySelectorAll(".sidebar .icon").forEach((icon) => {
     icon.addEventListener("click", () => {
       const targetId = icon.getAttribute("data-target");
       const subSidebar = document.getElementById(targetId);
-
+ 
       document.querySelectorAll(".sidebar .icon").forEach((item) => {
         item.classList.remove("active");
       });
       icon.classList.add("active");
-
+ 
       document.querySelectorAll(".sub-sidebar").forEach((sidebar) => {
         if (sidebar.id !== targetId) {
           sidebar.classList.remove("open");
@@ -62,7 +62,7 @@ function setupSidebarListeners(viewer) {
     });
   });
 }
-
+ 
 async function renderProjectItems(containerId) {
   const projectItems = await getOneProject(containerId);
   const imageDiv = document.getElementById("models-sidebar-items");
@@ -76,7 +76,7 @@ async function renderProjectItems(containerId) {
     const img = document.createElement("img");
     const divLabel = document.createElement("div");
     const itmContainer = document.createElement("div");
-
+ 
     imgContainer.className = "image-container";
     divSpinner.className = "spinner-border";
     divSpinner.role = "status";
@@ -85,25 +85,25 @@ async function renderProjectItems(containerId) {
     itmContainer.className = "item-container";
     itmContainer.appendChild(imgContainer);
     itmContainer.appendChild(divLabel);
-
+ 
     itemDiv.className = "sub-icon";
     imgContainer.appendChild(divSpinner);
     imgContainer.appendChild(img);
     itemDiv.appendChild(itmContainer);
-
+ 
     divSpinner.classList.add("d-none");
     img.classList.add("d-none");
     imageDiv.appendChild(itemDiv);
   });
 }
-
+ 
 // #region Setup Socket
 function setupSocket(userGuid, viewer) {
   const create_socket = () => {
     const socket = new WebSocket(
     // `wss://staging-issue-reporting-bxcubjc8gfemgkay.northeurope-01.azurewebsites.net/ws/${userGuid}` // <--staging
-     `wss://autodesk-issues-reporting.azurewebsites.net/ws/${userGuid}`
-      // `ws://localhost:8080/ws/${userGuid}` // <-- localhost
+    // `wss://autodesk-issues-reporting.azurewebsites.net/ws/${userGuid}`
+       `ws://localhost:8080/ws/${userGuid}` // <-- localhost
     );
     socket.onmessage = async (event) => {
       const message = JSON.parse(event.data);
@@ -131,7 +131,7 @@ function setupSocket(userGuid, viewer) {
   setInterval(create_socket, 180000);
 }
 // #endregion
-
+ 
 function handleMessageEvents() {
   window.addEventListener("message", async function (event) {
     console.log("Message received from parent:", event.data);
@@ -147,19 +147,19 @@ function handleMessageEvents() {
     }
   });
 }
-
+ 
 // async function handleLogin() {
 //   localStorage.removeItem("authToken");
 //   localStorage.removeItem("refreshToken");
 //   localStorage.removeItem("expires_at");
 //   localStorage.removeItem("internal_token");
-  
+ 
 //   const url = await fetch("/api/auth/sso");
 //   // SSA
-
-
-
-
+ 
+ 
+ 
+ 
 //   if (!url.ok) {
 //     console.log("Failed to get access token");
 //     return;
@@ -182,8 +182,8 @@ function handleMessageEvents() {
 //     }
 //   });
 // }
-
-
+ 
+ 
 async function handleLogin() {
   const response = await fetch("/api/auth/SSAToken");
  
@@ -196,12 +196,12 @@ async function handleLogin() {
  
   const expiresAt = Date.now() + tokenData.expires_in * 1000;
  
-  localStorage.setItem("authTokenHemyIssue", tokenData.access_token);
-  localStorage.setItem("expires_atHemyIssue", expiresAt);
+  localStorage.setItem("Auth_SSA", tokenData.access_token);
+  localStorage.setItem("expires_at", expiresAt);
   console.log("SSA Token acquired, expires at:", new Date(expiresAt).toLocaleTimeString());
   // await main();
 }
-
+ 
 // async function main() {
 //   try {
 //     handleMessageEvents();
@@ -226,22 +226,22 @@ async function handleLogin() {
 //         "x-internal-token": localStorage.getItem("internal_tokenHemyIssue"), // Send internal_token in a custom header
 //       },
 //     });
-
+ 
 //     if (!resp.ok) {
 //       await handleLogin();
 //       return;
 //     }
-
+ 
 //     const profile = await resp.json();
 //     // console.log("USER PROFILE", profile.userid);
 //     // console.log("USER token", localStorage.getItem("authTokenHemyIssue"));
-
+ 
 //     viewer = await initViewer(document.getElementById("preview"));
 //     divLoading.classList.add("d-none");
 //     login.style.display = "none";
 //     login.style.visibility = "hidden";
 //     divHeader.classList.remove("d-none");
-
+ 
 //     if (deviceType) {
 //       if (deviceType == "mobile") {
 //         divMainSidebar.classList.add("d-none");
@@ -249,7 +249,7 @@ async function handleLogin() {
 //         divMainSidebar.classList.remove("d-none");
 //       }
 //     }
-
+ 
 //     if (mode === "createIssue") {
 //       divMainSidebar.classList.add("d-none");
 //       divHeader.classList.add("d-none");
@@ -262,28 +262,28 @@ async function handleLogin() {
 //         setupSocket(userGuid, viewer);
 //       }
 //     }
-
+ 
 //   } catch (err) {
 //     alert("error displaying application");
 //     console.log(err);
 //   }
 // }
-
-
-
-
-
+ 
+ 
+ 
+ 
+ 
 async function main() {
   try {
     handleMessageEvents();
     await handleLogin();
-
+ 
     viewer = await initViewer(document.getElementById("preview"));
     divLoading.classList.add("d-none");
     login.style.display = "none";
     login.style.visibility = "hidden";
     divHeader.classList.remove("d-none");
-
+ 
     if (deviceType) {
       if (deviceType == "mobile") {
         divMainSidebar.classList.add("d-none");
@@ -291,7 +291,7 @@ async function main() {
         divMainSidebar.classList.remove("d-none");
       }
     }
-
+ 
     if (mode === "createIssue") {
       divMainSidebar.classList.add("d-none");
       divHeader.classList.add("d-none");
@@ -308,17 +308,17 @@ async function main() {
         setupSocket(userGuid, viewer);
       }
     }
-
+ 
   } catch (err) {
     alert("error displaying application");
     console.log(err);
   }
 }
-
+ 
 main();
-
+ 
 export async function loadIssues(containerId, filter = {}) {
   const allIssue = await getAllIssues(containerId, filter);
 }
-
+ 
 export { viewer };
