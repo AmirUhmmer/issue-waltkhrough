@@ -548,10 +548,10 @@ async function getAccessToken(callback) {
   }
   
   try {
-    const authToken = localStorage.getItem("Auth_SSA");
-    const refreshToken = localStorage.getItem("refreshToken");
-    const expiresAt = localStorage.getItem("expires_at");
-    const internalToken = localStorage.getItem("internal_token");
+    const authToken = localStorage.getItem("authTokenHemyIssue");
+    const refreshToken = localStorage.getItem("refreshTokenHemyIssue");
+    const expiresAt = localStorage.getItem("expires_atHemyIssue");
+    const internalToken = localStorage.getItem("internal_tokenHemyIssue");
 
     // const resp = await fetch("/api/auth/token", {
     //   method: "GET",
@@ -1015,7 +1015,7 @@ async function getProjectModels(containerId) {
 
       if(!objItem.length) {
         console.warn("No matching item found for lineageUrn:", model.lineageUrn);
-        const accessToken = localStorage.getItem('Auth_SSA'); // Retrieve the access token
+        const accessToken = localStorage.getItem('authTokenHemyIssue'); // Retrieve the access token
         const versionsUrl = `https://developer.api.autodesk.com/data/v1/projects/b.${modelSet[0].containerId}/items/${model.lineageUrn}/versions`;
         const response = await fetch(versionsUrl, {
             method: 'GET',
@@ -1102,7 +1102,7 @@ async function getProjectModels(containerId) {
 //       // };
 
 
-//       // âœ… Keep this listener
+//       // ✅ Keep this listener
 //       viewer.addEventListener(
 //         Autodesk.Viewing.GEOMETRY_LOADED_EVENT,
 //         modelLoaded
@@ -1118,10 +1118,10 @@ async function getProjectModels(containerId) {
 //           if (modelsLoaded === 1) {
 //             offset = model?.getData()?.globalOffset || { x: 0, y: 0, z: 0 };
 //             console.log("model.getData()", model.getData());
-//             console.log("âœ… Saved offset from first model:", offset);
+//             console.log("✅ Saved offset from first model:", offset);
 //           }
 
-//           console.log(`âœ… Model #${modelsLoaded} fully loaded`);
+//           console.log(`✅ Model #${modelsLoaded} fully loaded`);
 //           resolve();
 //         })
 //         .catch((err) => {
@@ -1152,7 +1152,7 @@ async function getProjectModels(containerId) {
 //     modelList = await Promise.all(projectItems);
 //   }
 
-//   // ðŸš€ Load models one by one
+//   // 🚀 Load models one by one
 //   for (const itemObj of modelList) {
 //     g_projectItems.push(itemObj);
 //     const latestVersion = itemObj.latestVersion;
@@ -1178,7 +1178,7 @@ async function getProjectModels(containerId) {
 //     });
 //   }
 
-//   console.log("âœ… All models loaded:", modelsLoaded);
+//   console.log("✅ All models loaded:", modelsLoaded);
 
 
 
@@ -1202,12 +1202,12 @@ async function modelLoaded(evt) {
 
         // Wait until geometry and object tree are ready
         if (viewer.model?.getData()?.instanceTree) {
-          console.log("âœ… Object tree already available â€” loading pushpins now");
+          console.log("✅ Object tree already available — loading pushpins now");
         } else {
-          console.log("â³ Waiting for object tree to be created...");
+          console.log("⏳ Waiting for object tree to be created...");
           await new Promise((resolve) => {
             const onTreeReady = () => {
-              console.log("âœ… Object tree ready, loading pushpins now");
+              console.log("✅ Object tree ready, loading pushpins now");
               viewer.removeEventListener(Autodesk.Viewing.OBJECT_TREE_CREATED_EVENT, onTreeReady);
               resolve();
             };
@@ -1215,16 +1215,14 @@ async function modelLoaded(evt) {
           });
         }
 
-        // âœ… Force the viewer to start rendering before loading pushpins
+        // ✅ Force the viewer to start rendering before loading pushpins
         await new Promise((resolve) => requestAnimationFrame(resolve));
 
-        console.log("ðŸš€ About to call loadIssuePushpins()...");
         await loadIssuePushpins();
-        console.log("âœ… loadIssuePushpins() completed");
 
-        // âœ… Force a redraw â€” PushPin sometimes misses initial invalidate()
+        // ✅ Force a redraw — PushPin sometimes misses initial invalidate()
         viewer.impl.invalidate(true, true, true);
-        console.log("ðŸ” Viewer invalidated after pushpin load");
+        console.log("🔁 Viewer invalidated after pushpin load");
       });
       
 console.log("Removing unwanted toolbar buttons...");
@@ -1293,7 +1291,7 @@ console.log("Removing unwanted toolbar buttons...");
 
           const checkModelsLoaded = async () => {
             while (!viewer.impl.modelQueue().getModels().length) {
-              console.log("â³ Waiting for models to load...");
+              console.log("⏳ Waiting for models to load...");
               await new Promise(r => setTimeout(r, 500));
             }
           };
@@ -1620,7 +1618,7 @@ export async function loadModelsandLoadOneIssue(
       console.log("Object", objItem);
       if(!objItem.length) {
         console.warn("No matching item found for lineageUrn:", model.lineageUrn);
-        const accessToken = localStorage.getItem('Auth_SSA'); // Retrieve the access token
+        const accessToken = localStorage.getItem('authTokenHemyIssue'); // Retrieve the access token
         const versionsUrl = `https://developer.api.autodesk.com/data/v1/projects/b.${modelSet[0].containerId}/items/${model.lineageUrn}/versions`;
         const response = await fetch(versionsUrl, {
             method: 'GET',
@@ -1808,14 +1806,8 @@ async function loadIssuePushpins(filter = {}) {
   let pushpin = [];
   console.log("Selected Project for Pushpins", selectedProject);
   let allIssues = await getAllIssues(selectedProject);
-  console.log('All Issues Retrieved:', allIssues.length, 'issues');
-  
-  // Filter only open issues for pushpins (closed issues don't have pushpins)
-  const openIssues = Array.isArray(allIssues) ? allIssues.filter((issue) => issue.status === "open") : [];
-  console.log('Open Issues for Pushpins:', openIssues.length, 'issues');
-  
-  // Use openIssues for pushpin creation
-  allIssues = openIssues;
+  allIssues = Array.isArray(allIssues) ? allIssues.filter((issue) => issue.status === "open") : [];
+  console.log('All Issues', allIssues)
   $.each(allIssues, (index, issue) => {
     //  console.log(issue);
     const pushpinDetails =
@@ -2442,7 +2434,7 @@ export async function initiateCreateIssueV2(viewer, message, userGuid) {
 export async function navigateHAFL(viewer, ha, fl) {
   const models = viewer.impl.modelQueue().getModels();
   if (!models?.length || models.length < 2) {
-    console.warn("âš ï¸ Need at least 2 fully loaded models before proceeding.");
+    console.warn("⚠️ Need at least 2 fully loaded models before proceeding.");
     navigateHAFL(viewer, ha, fl);
   }
 
@@ -2452,10 +2444,10 @@ export async function navigateHAFL(viewer, ha, fl) {
       const waitForFragments = () => {
         const fragList = model.getFragmentList?.();
         if (fragList && fragList.getCount() > 0) {
-          console.log(`âœ… Model[${index}] fragment list ready (${fragList.getCount()} frags).`);
+          console.log(`✅ Model[${index}] fragment list ready (${fragList.getCount()} frags).`);
           resolve();
         } else {
-          console.log(`â³ Waiting for Model[${index}] fragments...`);
+          console.log(`⏳ Waiting for Model[${index}] fragments...`);
           setTimeout(waitForFragments, 300);
         }
       };
@@ -2465,11 +2457,11 @@ export async function navigateHAFL(viewer, ha, fl) {
 
   const searchTerms = [ha, fl].filter(Boolean);
   if (!searchTerms.length) {
-    console.warn("âš ï¸ No valid Hard Asset or Functional Location provided.");
+    console.warn("⚠️ No valid Hard Asset or Functional Location provided.");
     return;
   }
 
-  console.log("ðŸ” Searching for:", searchTerms);
+  console.log("🔍 Searching for:", searchTerms);
 
   for (const [i, model] of models.entries()) {
     let modelDbIds = [];
@@ -2482,13 +2474,13 @@ export async function navigateHAFL(viewer, ha, fl) {
           term,
           async (dbIDs) => {
             if (dbIDs?.length) {
-              console.log(`âœ… Found ${dbIDs.length} in model[${i}] for: ${term}`);
+              console.log(`✅ Found ${dbIDs.length} in model[${i}] for: ${term}`);
 
               for (const dbId of dbIDs) {
                 await new Promise((resProp) => {
                   model.getProperties(dbId, (props) => {
                     if (props?.name) modelDbIds.push(dbId);
-                    else console.warn(`âš ï¸ dbId ${dbId} has no name property.`);
+                    else console.warn(`⚠️ dbId ${dbId} has no name property.`);
                     resProp();
                   });
                 });
@@ -2499,7 +2491,7 @@ export async function navigateHAFL(viewer, ha, fl) {
               viewer.setSelectionColor(new THREE.Color(0, 1, 0));
               viewer.select(dbIDs, model);
             } else {
-              console.warn(`âš ï¸ No matches for ${term} in model[${i}]`);
+              console.warn(`⚠️ No matches for ${term} in model[${i}]`);
             }
             resolve();
           },
@@ -2514,7 +2506,7 @@ export async function navigateHAFL(viewer, ha, fl) {
     if (modelDbIds.length === 0) continue;
 
     const uniqueIds = [...new Set(modelDbIds)];
-    console.log(`âœ… Model[${i}] isolate/focus for ${uniqueIds.length} dbIDs`, uniqueIds);
+    console.log(`✅ Model[${i}] isolate/focus for ${uniqueIds.length} dbIDs`, uniqueIds);
 
     const box = new THREE.Box3();
 
@@ -2523,7 +2515,7 @@ export async function navigateHAFL(viewer, ha, fl) {
       instanceTree.enumNodeFragments(id, fragId => fragIds.push(fragId));
 
       if (fragIds.length === 0) {
-        console.warn(`âš ï¸ No fragments found for dbId ${id} in model[${i}]`);
+        console.warn(`⚠️ No fragments found for dbId ${id} in model[${i}]`);
         continue;
       }
 
@@ -2535,12 +2527,12 @@ export async function navigateHAFL(viewer, ha, fl) {
     }
 
     if (box.isEmpty()) {
-      console.warn("âš ï¸ No valid bounding box found, using fitToView.");
+      console.warn("⚠️ No valid bounding box found, using fitToView.");
       viewer.fitToView(uniqueIds, model);
       continue;
     }
 
-    console.log("âœ… Final merged box:", box);
+    console.log("✅ Final merged box:", box);
 
     const targetCenter = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
@@ -2582,7 +2574,7 @@ export async function navigateHAFL(viewer, ha, fl) {
     viewer.impl.sceneUpdated(true);
 
     setTimeout(() => {
-      console.log("ðŸ” Re-applying selection and theming after camera settle");
+      console.log("🔁 Re-applying selection and theming after camera settle");
       viewer.clearSelection();
       viewer.select(uniqueIds, model);
       uniqueIds.forEach(id => {
@@ -2852,7 +2844,7 @@ function filterByWorkset(worksetName, viewer) {
       // isolate matching elements
       viewer.isolate(dbIds, model);
     } else {
-      // â— NO MATCHES â†’ HIDE ENTIRE MODEL
+      // ❗ NO MATCHES → HIDE ENTIRE MODEL
       viewer.hide(model.getRootId(), model);
     }
   });
@@ -3223,11 +3215,6 @@ async function performFilteringWithGetAllIssues(levelId) {
     if (sidebarItems) {
       sidebarItems.innerHTML = '';
       
-      // Add test click detection
-      sidebarItems.addEventListener('click', (event) => {
-        console.log('SIDEBAR CLICK DEBUG: Click detected on sidebar', event.target);
-      });
-      
       filteredIssues.forEach(issue => {
         const issueDiv = document.createElement('div');
         issueDiv.className = 'sub-icon';
@@ -3235,9 +3222,6 @@ async function performFilteringWithGetAllIssues(levelId) {
         issueDiv.style.padding = '5px';
         issueDiv.style.marginLeft = '10px';
         issueDiv.style.borderBottom = '1px solid rgb(170, 170, 170)';
-        issueDiv.style.pointerEvents = 'auto';
-        issueDiv.style.userSelect = 'none';
-        issueDiv.style.zIndex = '10';
         
         const statusColor = {
           open: "bg-warning",
@@ -3248,63 +3232,34 @@ async function performFilteringWithGetAllIssues(levelId) {
         };
         
         issueDiv.innerHTML = `
-          <div class="d-block justify-content-between" onclick="console.log('INNER DIV CLICKED: Issue ${issue.id}')" style="pointer-events: auto;">
+          <div class="d-block justify-content-between">
             <div class="d-flex">
-              <h6 class="mb-1 fw-bold" style="pointer-events: auto;">#${issue.displayId || issue.id} - ${issue.title}</h6>
+              <h6 class="mb-1 fw-bold">#${issue.displayId || issue.id} - ${issue.title}</h6>
             </div>
-            <div class="d-flex" style="height: 20px; align-items: center; pointer-events: auto;">
+            <div class="d-flex" style="height: 20px; align-items: center;">
               <div style="border-radius: 5px; width: 5px; height: 20px;" class="${statusColor[issue.status] || 'bg-secondary'}"></div>
               <small class="ms-1">${issue.status}</small>
             </div>
           </div>
         `;
         
-        issueDiv.addEventListener('click', async (event) => {
-          console.log('CLICK DEBUG: Issue div clicked!', event);
-          console.log('Issue ID:', issue.id);
-          console.log('Issue title:', issue.title);
-          
+        issueDiv.addEventListener('click', () => {
           // Remove active class from all issues
           document.querySelectorAll('#issues-sidebar-items .sub-icon').forEach(el => {
             el.classList.remove('active');
           });
           issueDiv.classList.add('active');
           
-          // Handle pushpin selection and zoom
+          // Handle pushpin selection if needed
           if (issue.linkedDocuments && issue.linkedDocuments.length > 0) {
             const pushpinDetails = issue.linkedDocuments[0].details;
-            if (pushpinDetails && pushpinDetails.position) {
+            if (pushpinDetails) {
               console.log('Issue clicked:', issue.id, pushpinDetails.position);
-              
-              // Select the pushpin
-              try {
-                const pushpinExtension = await viewer.loadExtension("Autodesk.BIM360.Extension.PushPin");
-                pushpinExtension.selectOne(issue.id);
-              } catch (error) {
-                console.log('Could not select pushpin:', error);
-              }
-              
-              // Zoom to the issue position
-              const position = pushpinDetails.position;
-              const targetPoint = new THREE.Vector3(
-                position.x || position[0] || 0,
-                position.y || position[1] || 0,
-                position.z || position[2] || 0
-              );
-              
-              // Set camera to look at the issue position
-              const camera = viewer.navigation.getCamera();
-              const distance = 10; // Distance from the issue
-              const eyePosition = targetPoint.clone().add(new THREE.Vector3(distance, distance, distance));
-              
-              viewer.navigation.setView(eyePosition, targetPoint);
-              viewer.navigation.fitToView([pushpinDetails.objectId]);
             }
           }
         });
         
         sidebarItems.appendChild(issueDiv);
-        console.log('ISSUE CREATED: Added issue', issue.id, 'to sidebar');
       });
     }
     

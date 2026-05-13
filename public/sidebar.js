@@ -7,18 +7,18 @@
 //   }
 //   return resp.json();
 // }
- 
+
 async function getJSON(url) {
-    const token = localStorage.getItem('Auth_SSA');
-    // const refreshToken = localStorage.getItem('refreshToken');
-    const refreshToken = localStorage.getItem('Auth_SSA'); //test
-    const expires_at = localStorage.getItem('expires_at');
-    // const internal_token = localStorage.getItem('Auth_SSA');
- 
- 
+    const token = localStorage.getItem('authTokenHemyIssue');
+    // const refreshToken = localStorage.getItem('refreshTokenHemyIssue');
+    const refreshToken = localStorage.getItem('authTokenHemyIssue'); //test
+    const expires_at = localStorage.getItem('expires_atHemyIssue');
+    // const internal_token = localStorage.getItem('authTokenHemyIssue');
+
+
     console.log("Request URL:", url);
     // console.log("Authorization Header:", `Bearer ${token}`);
- 
+
     const resp = await fetch(url, {
         headers: {
             'Authorization': `Bearer ${token}`,  // Send authToken in the Authorization header
@@ -36,23 +36,23 @@ async function getJSON(url) {
     // }
     return resp.json();
 }
- 
+
 function createTreeNode(id, text, icon, children = false) {
   return { id, text, children, itree: { icon } };
 }
- 
+
 async function getHubs() {
   const hubs = await getJSON("/api/hubs");
   return hubs.map((hub) =>
     createTreeNode(`hub|${hub.id}`, hub.attributes.name, "icon-hub", true)
   );
 }
- 
+
 async function getHubsList() {
   const hubs = await getJSON("/api/hubs");
   return hubs;
 }
- 
+
 async function getProjects(hubId) {
   const projects = await getJSON(`/api/hubs/${hubId}/projects`);
   return projects.map((project) =>
@@ -64,12 +64,12 @@ async function getProjects(hubId) {
     )
   );
 }
- 
+
 async function getProjectsList(hubId) {
   const projects = await getJSON(`/api/hubs/${hubId}/projects`);
   return projects;
 }
- 
+
 export async function getProjectsDropdown(hubId) {
   const projects = await getJSON(`/api/hubs/${hubId}/projects`);
   return projects.map((project) =>
@@ -82,7 +82,7 @@ export async function getProjectsDropdown(hubId) {
     )
   );
 }
- 
+
 async function getContents(hubId, projectId, folderId = null) {
   const contents = await getJSON(
     `/api/hubs/${hubId}/projects/${projectId}/contents` +
@@ -106,16 +106,16 @@ async function getContents(hubId, projectId, folderId = null) {
     }
   });
 }
- 
+
 async function getFolderContents(hubId, projectId, folderId = null) {
   const contents = await getJSON(
     `/api/hubs/${hubId}/projects/${projectId}/contents` +
     (folderId ? `?folder_id=${folderId}` : "")
   );
- 
+
   return contents;
 }
- 
+
 async function getVersions(hubId, projectId, itemId) {
   const versions = await getJSON(
     `/api/hubs/${hubId}/projects/${projectId}/contents/${itemId}/versions`
@@ -128,16 +128,16 @@ async function getVersions(hubId, projectId, itemId) {
     )
   );
 }
- 
+
 export async function getItemVersions(hubId, projectId, itemId) { }
- 
+
 export async function getVersionsList(hubId, projectId, itemId) {
   const versions = await getJSON(
     `/api/hubs/${hubId}/projects/${projectId}/contents/${itemId}/versions`
   );
   return versions;
 }
- 
+
 export function initTree(selector, onSelectionChanged) {
   // See http://inspire-tree.com
   const tree = new InspireTree({
@@ -164,26 +164,26 @@ export function initTree(selector, onSelectionChanged) {
   tree.on("node.click", function (event, node) {
     event.preventTreeDefault();
     const tokens = node.id.split("|");
- 
+
     if (tokens[0] === "project") {
       onSelectionChanged(tokens[2], tokens[3]);
     }
   });
   return new InspireTreeDOM(tree, { target: selector });
 }
- 
+
 // export async function initProjectDropdown(selector) {
 //   const hubs = await getHubsList();
- 
+
 //   hubs.map(async (hub) => {
 //     $(selector).append(`<optgroup label="${hub.attributes.name}">`);
- 
+
 //     const projects = await getProjectsList(hub.id);
 //     projects.map(async (project) => {
 //       const folders = await getFolderContents(hub.id, project.id);
- 
+
 //       $(selector).append(`<optgroup label="${project.attributes.name}">`);
- 
+
 //       const projectFilesFolder = folders[0];
 //       const items = await getFolderContents(
 //         hub.id,
@@ -197,31 +197,31 @@ export function initTree(selector, onSelectionChanged) {
 //                     &nbsp;&nbsp;&nbsp;${item.attributes.displayName}
 //                   </option>`);
 //       });
- 
+
 //       $(selector).append(`</optgroup>`);
 //     });
 //     $(selector).append(`</optgroup>`);
 //   });
 // }
- 
+
 export async function getThumbnails(urn) {
   //const seedUrn = window.btoa(urn).replace(/=/g, "");
   const thumbnail = await getJSON(`/api/thumbnail/${urn}`);
- 
+
   return thumbnail;
 }
- 
+
 export async function initProjectDropdown(selector) {
   const hubs = await getHubsList();
   const mainHub = hubs[0];
- 
+
   const projects = await getProjectsList(mainHub.id);
- 
+
   $.each(projects, async (index, project) => {
     //  console.log('PROJECT', project, value);
     var optgroup = $("<optgroup>");
     optgroup.attr("label", project.attributes.name);
- 
+
     const folders = await getFolderContents(mainHub.id, project.id);
     const mainFolder = folders[0];
     const items = await getFolderContents(
@@ -237,7 +237,7 @@ export async function initProjectDropdown(selector) {
         item.id
       );
       const latestVersion = versionList[0];
- 
+
       var option = $("<option></option>");
       option.val(
         `project|${mainHub.id}|${project.id}|${project.relationships.issues.data.id
@@ -248,29 +248,29 @@ export async function initProjectDropdown(selector) {
       optgroup.append(option);
       //  console.log({latestVersion});
       //  const thumbnail = await getThumbnails(latestVersion.relationships.thumbnails.data.id);
- 
+
       // console.log({thumbnail });
- 
+
     });
- 
+
     $(selector).append(optgroup);
   });
- 
+
   return projects;
 }
- 
+
 export async function initial_project_list() {
   const hubs = await getHubsList();
   const mainHub = hubs[0];
   const projects = await getProjectsList(mainHub.id);
- 
+
   $.each(projects, async (index, project) => {
     //  console.log('PROJECT', project, value);
     const accordionItem = $("<div>");
     accordionItem.attr('class', 'accordion-item')
- 
+
     const folders = await getFolderContents(mainHub.id, project.id);
- 
+
     const mainFolder = folders[0];
     const items = await getFolderContents(
       mainHub.id,
@@ -296,24 +296,24 @@ export async function initial_project_list() {
             This is the content for the first item. You can include any HTML here.
      </div>
      </div>`
- 
+
       //     const thumbnail = await getThumbnails(item.id);
- 
+
       console.log({ project, thumbnail });
     });
   });
- 
+
   return projects;
 }
- 
+
 export async function getOneProject(projectId) {
   const hubs = await getHubsList();
   const mainHub = hubs[0];
- 
+
   // const projects = await getProjectsList(mainHub.id);
   // console.log({ projects });
   // const oneProject = projects.filter((project) => project.relationships.issues.data.id === projectId);
- 
+  
   const project = await getJSON(`/api/projects/${mainHub.id}/b.${projectId}`);
   const modelSetViews = [
     {
@@ -332,34 +332,34 @@ export async function getOneProject(projectId) {
       ],
     }
   ]
- 
+
   //const views = modelSetViews.filter((modelSet) => modelSet.containerId === projectId);
- 
- 
+
+
   console.log(project);
   //const project = oneProject[0];
- 
+
   const folders = await getFolderContents(mainHub.id, project.id);
- 
+
   const projectFilesFolder = folders.find((f) => {
     const name = f?.attributes?.displayName || f?.attributes?.name || "";
     return typeof name === "string" && name.toLowerCase().includes("project files");
   });
- 
+
   const rootFolder = projectFilesFolder || folders[0];
   if (!rootFolder?.id) {
     return [];
   }
- 
+
   const visitedFolderIds = new Set();
   const allItems = [];
- 
+
   async function collectItems(folderId, depth) {
     if (!folderId || visitedFolderIds.has(folderId) || depth > 6) {
       return;
     }
     visitedFolderIds.add(folderId);
- 
+
     const contents = await getFolderContents(mainHub.id, project.id, folderId);
     for (const entry of contents) {
       if (entry.type === "folders") {
@@ -369,14 +369,14 @@ export async function getOneProject(projectId) {
       }
     }
   }
- 
+
   await collectItems(rootFolder.id, 0);
- 
+
   const MODEL_EXTS = [".rvt", ".ifc", ".nwd", ".nwf", ".dwg", ".dxf", ".rfa"];
   const hasRevit = allItems.some((i) =>
     (i?.attributes?.displayName || "").toLowerCase().endsWith(".rvt")
   );
- 
+
   let itemFilter = allItems;
   if (hasRevit) {
     itemFilter = allItems.filter((i) =>
@@ -391,53 +391,52 @@ export async function getOneProject(projectId) {
       itemFilter = withKnownExt;
     }
   }
- 
+
   return itemFilter.map(async (item) => {
     const versions = await getVersionsList(mainHub.id, project.id, item.id);
     return Object.assign(item, { "latestVersion": versions[0] });
   });
- 
+
   //return await itemFilter;
 }
- 
+
 export async function getOneItem(projectId, itemId) {
   const hubs = await getHubsList();
   const mainHub = hubs[0];
- 
+
   // const projects = await getProjectsList(mainHub.id);
   // console.log({ projects });
   // const oneProject = projects.filter((project) => project.relationships.issues.data.id === projectId);
- 
+  
   const project = await getJSON(`/api/projects/${mainHub.id}/b.${projectId}`);
- 
- 
+
+
   //const views = modelSetViews.filter((modelSet) => modelSet.containerId === projectId);
- 
- 
+
+
   console.log(project);
   //const project = oneProject[0];
- 
+  
   const folders = await getFolderContents(mainHub.id, project.id);
- 
+
   const mainFolder = folders[0];
- 
+  
   const items = await getFolderContents(
     mainHub.id,
     project.id,
     mainFolder.id
   );
   const itemFilter = items.filter(item => item.id === itemId);
- 
+
   const versions = await getVersionsList(mainHub.id, project.id, itemFilter[0].id);
- 
+
   return await versions[0];
 }
- 
- 
+
+
 export async function allProjects() {
   const hubs = await getHubsList();
   const mainHub = hubs[0];
   const projects = await getProjectsList(mainHub.id);
   return projects;
 }
- 

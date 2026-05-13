@@ -38,7 +38,7 @@
     "playwright": "^1.49.1",
     "playwright-stealth": "^0.0.1",
     "puppeteer": "^23.11.1",
-    "sqlite3": "^6.0.1",
+    "sqlite3": "^5.1.7",
     "websocket": "^1.0.35",
     "ws": "^8.18.1"
   },

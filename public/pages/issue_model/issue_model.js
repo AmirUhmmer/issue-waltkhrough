@@ -5,7 +5,7 @@
 //   setPushpinData,
 //   loadModelsandLoadOneIssue,
 // } from "../../viewer.js";
- 
+
 // try {
 //   var srcWin = null;
 //   var srcOrigin = "";
@@ -15,20 +15,20 @@
 //   const containerId = params.get("containerId");
 //   const issueId = params.get("issueId");
 //   const mode = params.get("mode");
- 
+
 //   window.addEventListener("message", async (event) => {
 //     if (!src) {
 //       srcWin = event.source;
 //       srcOrigin = event.origin;
- 
+
 //       src = {
 //         srcWin,
 //         srcOrigin,
 //       };
 //     }
- 
+
 //     console.log("Message received from parent:", event.data);
- 
+
 //     if (event.data.mode) {
 //       const updatedIssueData = await fetch(
 //         `/api/issue/${containerId}/${issueId}`,
@@ -40,21 +40,21 @@
 //           body: JSON.stringify({ payload: event.data.payload }),
 //         }
 //       );
- 
+
 //       srcWin.postMessage(updatedIssueData, srcOrigin);
 //     }
 //   });
- 
+
 //   const resp = await fetch("/api/auth/profile", {
 //     method: "GET",
 //     credentials: "include",
 //   });
- 
+
 //   const divLoading = document.getElementById("div-loading");
 //   if (resp.ok) {
 //     divLoading.style.display = "none";
 //     const viewer = await initViewer(document.getElementById("preview"));
- 
+
 //     // console.log(issue_details);
 //     if (issueId && containerId) {
 //       const issue = await fetch(`/api/issue/${containerId}/${issueId}`);
@@ -77,7 +77,7 @@
 //     divLoading.classList.remove("d-none");
 //     const url = await fetch("/api/auth/sso");
 //     const url_json = await url.json();
- 
+
 //     const loginWindow = window.open(
 //       url_json,
 //       "Login",
@@ -87,20 +87,20 @@
 //       if (event.origin !== window.location.origin) {
 //         return; // Ignore messages from other origins
 //       }
- 
+
 //       const { token, refreshToken, expires_at, internal_token } = event.data;
 //       if (token) {
-//         localStorage.setItem("Auth_SSA", token);
+//         localStorage.setItem("authToken", token);
 //         localStorage.setItem("refreshToken", refreshToken);
 //         localStorage.setItem("expires_at", expires_at);
 //         localStorage.setItem("internal_token", internal_token);
 //         // const resp = await fetch("/api/auth/profile");
 //         window.location.reload(); // Reload the page to load viewer with token
- 
+
 //         console.log(token);
 //       }
 //     });
- 
+
 //     //  login.style.visibility = "visible";
 //     //  login.innerText = "Login";
 //     //  divLoading.classList.add("d-none");
@@ -111,22 +111,22 @@
 //   alert("error displaying application");
 //   console.log(err);
 // }
- 
+
 import {
   initViewer,
   loadModelsandCreateIssue,
   loadModelsandLoadOneIssue,
 } from "../../viewer.js";
- 
+
 async function main() {
   const divLoading = document.getElementById("div-loading");
   const login = document.getElementById("login");
   const params = new URLSearchParams(window.location.search);
   const containerId = params.get("containerId");
   const issueId = params.get("issueId");
- 
+
   let src = null;
- 
+
   // --- Listen to parent window messages ---
   window.addEventListener("message", async (event) => {
     // Filter out empty or invalid messages
@@ -136,7 +136,7 @@ async function main() {
     
     if (!src) src = { srcWin: event.source, srcOrigin: event.origin };
     console.log("Message received:", event.data);
- 
+
     if (event.data.mode) {
       const response = await fetch(`/api/issue/${containerId}/${issueId}`, {
         method: "PATCH",
@@ -146,7 +146,7 @@ async function main() {
       src.srcWin.postMessage(await response.json(), src.srcOrigin);
     }
   });
- 
+
   // --- Handle expired or missing tokens ---
   const expiresAt = localStorage.getItem("expires_atHemyIssue");
   if (!expiresAt || Date.now() > parseInt(expiresAt)) {
@@ -155,14 +155,14 @@ async function main() {
     await handleLogin((tokens) => afterLogin(tokens, containerId, issueId, src));
     return;
   }
- 
+
   // --- Try to load profile with tokens ---
   const profileResp = await fetch("/api/auth/profile", {
     method: "GET",
     credentials: "include",
     headers: buildAuthHeaders(),
   });
- 
+
   if (profileResp.ok) {
     await loadViewer(containerId, issueId, src);
   } else {
@@ -170,46 +170,46 @@ async function main() {
     await handleLogin((tokens) => afterLogin(tokens, containerId, issueId, src));
   }
 }
- 
+
 // --- Load Viewer and Issue ---
 async function loadViewer(containerId, issueId, src) {
   const divLoading = document.getElementById("div-loading");
   divLoading.style.display = "none";
- 
+
   const viewer = await initViewer(document.getElementById("preview"));
   if (!issueId || !containerId) return;
- 
-  const issue = await fetch(`/api/issue/${containerId}/${issueId}`,
+
+  const issue = await fetch(`/api/issue/${containerId}/${issueId}`, 
     {
       method: "GET",
       credentials: "include",
       headers: {
-        "Authorization": `Bearer ${localStorage.getItem("Auth_SSA")}`,
-        "x-refresh-token": localStorage.getItem("refreshToken"), // Send refreshToken in a custom header
-        "x-expires-at": localStorage.getItem("expires_at"), // Send expires_at in a custom header
-        "x-internal-token": localStorage.getItem("internal_token"), // Send internal_token in a custom header
+        "Authorization": `Bearer ${localStorage.getItem("authTokenHemyIssue")}`,
+        "x-refresh-token": localStorage.getItem("refreshTokenHemyIssue"), // Send refreshToken in a custom header
+        "x-expires-at": localStorage.getItem("expires_atHemyIssue"), // Send expires_at in a custom header
+        "x-internal-token": localStorage.getItem("internal_tokenHemyIssue"), // Send internal_token in a custom header
       },
     }
   );
   const issueDetails = await issue.json();
- 
+
   console.log("Issue:", issueDetails);
- 
+
   if (issueDetails.linkedDocuments?.length > 0) {
     await loadModelsandLoadOneIssue(viewer, containerId, issueDetails, src);
   } else {
     await loadModelsandCreateIssue(viewer, containerId, src);
   }
 }
- 
+
 // --- Handle Login (SSO popup) ---
 async function handleLogin(onSuccess) {
   const divLoading = document.getElementById("div-loading");
   divLoading.classList.remove("d-none");
- 
+
   const urlResp = await fetch("/api/auth/sso");
   const ssoUrl = await urlResp.json();
- 
+
   const loginWindow = window.open(ssoUrl, "Login", "width=600,height=600");
 
   // Create a named function for the login handler so we can remove it later
@@ -237,44 +237,43 @@ async function handleLogin(onSuccess) {
     }
   }, 1000);
 }
- 
+
 // --- After successful login (no reload) ---
 async function afterLogin(tokens, containerId, issueId, src) {
   console.log("Login successful, loading viewer...");
   await loadViewer(containerId, issueId, src);
 }
- 
+
 // --- Helper: build auth headers ---
 function buildAuthHeaders() {
   return {
-    "Authorization": `Bearer ${localStorage.getItem("Auth_SSA")}`,
-    "x-refresh-token": localStorage.getItem("refreshToken"),
-    "x-expires-at": localStorage.getItem("expires_at"),
-    "x-internal-token": localStorage.getItem("internal_token"),
+    "Authorization": `Bearer ${localStorage.getItem("authTokenHemyIssue")}`,
+    "x-refresh-token": localStorage.getItem("refreshTokenHemyIssue"),
+    "x-expires-at": localStorage.getItem("expires_atHemyIssue"),
+    "x-internal-token": localStorage.getItem("internal_tokenHemyIssue"),
   };
 }
- 
+
 // --- Helper: save tokens ---
 function saveTokens({ token, refreshToken, expires_at, internal_token }) {
-  localStorage.setItem("Auth_SSA", token);
-  localStorage.setItem("refreshToken", refreshToken);
-  localStorage.setItem("expires_at", expires_at);
-  localStorage.setItem("internal_token", internal_token);
+  localStorage.setItem("authTokenHemyIssue", token);
+  localStorage.setItem("refreshTokenHemyIssue", refreshToken);
+  localStorage.setItem("expires_atHemyIssue", expires_at);
+  localStorage.setItem("internal_tokenHemyIssue", internal_token);
 }
- 
+
 // --- Helper: clear tokens ---
 function clearTokens() {
   [
-    "Auth_SSA",
-    "refreshToken",
-    "expires_at",
-    "internal_token",
+    "authTokenHemyIssue",
+    "refreshTokenHemyIssue",
+    "expires_atHemyIssue",
+    "internal_tokenHemyIssue",
   ].forEach((key) => localStorage.removeItem(key));
 }
- 
+
 // --- Start ---
 main().catch((err) => {
   console.error("Error displaying app:", err);
   alert("Error displaying application");
 });
- 

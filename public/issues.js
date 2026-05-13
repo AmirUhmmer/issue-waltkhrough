@@ -6,11 +6,11 @@ import {
 } from "./viewer.js";
 var currentContainerId = null;
 async function getIssueSubTypes(containerId) {
-  const token = localStorage.getItem("Auth_SSA");
-  const refreshToken = localStorage.getItem("refreshToken");
-  const expires_at = localStorage.getItem("expires_at");
-  const internal_token = localStorage.getItem("internal_token");
- 
+  const token = localStorage.getItem("authTokenHemyIssue");
+  const refreshToken = localStorage.getItem("refreshTokenHemyIssue");
+  const expires_at = localStorage.getItem("expires_atHemyIssue");
+  const internal_token = localStorage.getItem("internal_tokenHemyIssue");
+
   const res = await fetch(`/api/issueSubTypes/${containerId}`,
     {
       headers: {
@@ -25,13 +25,13 @@ async function getIssueSubTypes(containerId) {
     $("#dropdownIssueTypes").append($("<option>").val(t.id).text(t.title))
   );
 }
- 
+
 export async function getIssueSubTypesData(containerId) {
-  const token = localStorage.getItem("Auth_SSA");
-  const refreshToken = localStorage.getItem("refreshToken");
-  const expires_at = localStorage.getItem("expires_at");
-  const internal_token = localStorage.getItem("internal_token");
- 
+  const token = localStorage.getItem("authTokenHemyIssue");
+  const refreshToken = localStorage.getItem("refreshTokenHemyIssue");
+  const expires_at = localStorage.getItem("expires_atHemyIssue");
+  const internal_token = localStorage.getItem("internal_tokenHemyIssue");
+
   const res = await fetch(`/api/issueTypes/${containerId}`, {
       headers: {
             'Authorization': `Bearer ${token}`,  // Send authToken in the Authorization header
@@ -44,13 +44,13 @@ export async function getIssueSubTypesData(containerId) {
   return issueTypes;
   //    return issueSubTypes.map(t => $('#dropdownIssueTypes').append($('<option>').val(t.id).text(t.title)));
 }
- 
+
 export async function getAllIssues(projectId, filter) {
   const token = localStorage.getItem('authTokenHemyIssue');
   const refreshToken = localStorage.getItem('refreshTokenHemyIssue');
   const expires_at = localStorage.getItem('expires_atHemyIssue');
   const internal_token = localStorage.getItem('internal_tokenHemyIssue');
- 
+
   const params = new URLSearchParams(filter);
   const res = await fetch(
     `${window.location.origin}/api/allIssues/${projectId}?${params}`, {
@@ -64,13 +64,13 @@ export async function getAllIssues(projectId, filter) {
   //  console.log(res.json());
   return await res.json();
 }
- 
+
 export async function getIssuesFiltered(projectId, filter) {
   const token = localStorage.getItem('authTokenHemyIssue');
   const refreshToken = localStorage.getItem('refreshTokenHemyIssue');
   const expires_at = localStorage.getItem('expires_atHemyIssue');
   const internal_token = localStorage.getItem('internal_tokenHemyIssue');
- 
+
   const params = new URLSearchParams(filter);
   const res = await fetch(
     `${window.location.origin}/api/allIssues/${projectId}?${params}`, {
@@ -84,7 +84,7 @@ export async function getIssuesFiltered(projectId, filter) {
   //  console.log(res.json());
   return await res.json();
 }
- 
+
 // export async function initIssueDefs(projectId, containerId) {
 //   const res = await fetch(`/api/issueDataMap/${projectId}/${containerId}`);
 //   await getIssueSubTypes(containerId);
@@ -97,20 +97,20 @@ export async function getIssuesFiltered(projectId, filter) {
 //       const option = $("<option></option>");
 //       option.text(subtype.title);
 //       option.val(`types|${issueType.id}|${subtype.id}`);
- 
+
 //       optgroup.append(option);
 //     });
 //     $("#issue-type").append(optgroup);
 //   });
 //   //  console.log({issueTypes});
 // }
- 
+
 export async function initIssueDefs(projectId, containerId) {
   const res = await fetch(`/api/issueDataMap/${projectId}/${containerId}`);
   return res;
   //  console.log({issueTypes});
 }
- 
+
 export async function createIssue(payload) {
   const res = await fetch(`/api/createIssue/${currentContainerId}`, {
     method: "POST",
@@ -121,7 +121,7 @@ export async function createIssue(payload) {
   });
   return res;
 }
- 
+
 export async function createIssue_v2(payload, contId) {
   const res = await fetch(`/api/createIssue/${contId}`, {
     method: "POST",
@@ -132,31 +132,31 @@ export async function createIssue_v2(payload, contId) {
   });
   return await res.json();
 }
- 
+
 export async function createComment(containerId, issueId, comment) {
   const res = await fetch(`/api/createComment/${containerId}/${issueId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ comment: comment }),
   });
- 
+
   // $("#issueTree").jstree(true).refresh();
 }
- 
+
 export async function createAttachment(containerId, issueId, formData) {
   const res = await fetch(`/api/createAttachment/${containerId}/${issueId}`, {
     method: "POST",
     body: formData,
   });
 }
- 
+
 export function prepareBIMIssuesTree(containerId) {
   currentContainerId = containerId;
   var thisIssueTree = $("#issueTree").jstree(true);
   if (thisIssueTree) {
     thisIssueTree.destroy();
   }
- 
+
   $("#issueTree")
     .jstree({
       core: {
@@ -171,7 +171,7 @@ export function prepareBIMIssuesTree(containerId) {
             if (node.id == "#") {
               var date_input = new Date($("#issueDueDate").val());
               var date_input_to = new Date($("#issueDueDateTo").val());
- 
+
               var one_day_late = date_input;
               var due_date =
                 date_input.getFullYear() +
@@ -185,7 +185,7 @@ export function prepareBIMIssuesTree(containerId) {
                 ("0" + (date_input_to.getMonth() + 1)).slice(-2) +
                 "-" +
                 ("0" + date_input_to.getDate()).slice(-2);
- 
+
               one_day_late.setDate(date_input.getDate() + 1);
               one_day_late =
                 one_day_late.getFullYear() +
@@ -251,7 +251,7 @@ export function prepareBIMIssuesTree(containerId) {
     .bind("activate_node.jstree", function (evt, data) {
       if (data != null && data.node != null) {
         const issue = data.node.data;
- 
+
         switch (data.node.type) {
           case "issues":
             console.log({ issue });
@@ -266,10 +266,10 @@ export function prepareBIMIssuesTree(containerId) {
             const seedUrn = is3D ? viewerState.seedURN : "";
             const position = linkedDocument.details.position;
             const objectId = linkedDocument.details.objectId;
- 
+
             //  console.log({issue});
             // var pushPinHandle = await viewer.loadExtension('Autodesk.BIM360.Extension.PushPin');
- 
+
             // pushPinHandle.createItem({
             //     id: issue.id, // The issue ID.
             //     label: issueAttributes.identifier, // The value displayed when you select the pushpin.
@@ -289,9 +289,9 @@ export function prepareBIMIssuesTree(containerId) {
             //     status: data.node.data.status,
             //     viewerState: viewerState
             // })
- 
+
             //     loadModel(seedUrn, guid);
- 
+
             break;
           case "attachments":
             window.location =
@@ -304,7 +304,7 @@ export function prepareBIMIssuesTree(containerId) {
       }
     });
 }
- 
+
 export async function populateIssueList(parent, issues) {
   let issueList = [];
   $(parent).empty();
@@ -312,7 +312,7 @@ export async function populateIssueList(parent, issues) {
     const issue_div = $(`<div class="sub-icon">`);
     issue_div.attr("id", `issue-${issue.id}`);
     issue_div.attr("style", "cursor: pointer;");
- 
+
     const statusColor = {
       open: "bg-warning",
       closed: "bg-secondary",
@@ -320,7 +320,7 @@ export async function populateIssueList(parent, issues) {
       pending: "bg-primary",
       in_review: "bg-info",
     };
-   
+    
     const issue_content = `<div class="d-block justify-content-between">
         <div class="d-flex">
           <h6 class="mb-1 fw-bold">#${issue.displayId} - ${issue.title}</h6>
@@ -328,17 +328,17 @@ export async function populateIssueList(parent, issues) {
         <div class="d-flex" style="height: 20px; align-items: center;">
           <div style="border-radius: 5px; width: 5px; height: 20px;" class="${statusColor[issue.status] || 'bg-secondary'}"></div>
           <small class="ms-1">${issue.status} &middot;</small>
-          ${issue.linkedDocuments && issue.linkedDocuments.length > 0 ?
+          ${issue.linkedDocuments && issue.linkedDocuments.length > 0 ? 
             `<small class="ms-2">Level: ${getLevelNameForIssue(issue)}</small>` : ''}
         </div>
       </div>`;
- 
+
     issue_div.append(issue_content);
     issueList.push(issue_div);
   });
- 
+
   $(parent).append(issueList);
- 
+
   $.each(issues, (index, issue) => {
     $(`#issue-${issue.id}`).on("click", function () {
       $("#issues-sidebar-items .sub-icon").removeClass("active");
@@ -360,23 +360,23 @@ export async function populateIssueList(parent, issues) {
     });
   });
 }
- 
+
 function getLevelNameForIssue(issue) {
   if (!issue.linkedDocuments || issue.linkedDocuments.length === 0) return 'N/A';
- 
+  
   const pushpinDetails = issue.linkedDocuments[0].details;
   if (!pushpinDetails || !pushpinDetails.position) return 'N/A';
- 
+  
   // This function will be available from viewer.js when loaded
   if (typeof getLevelForPosition === 'function') {
     const levelId = getLevelForPosition(pushpinDetails.position);
     const level = window.availableLevels ? window.availableLevels.find(l => l.id === levelId) : null;
     return level ? level.name : 'Unknown';
   }
- 
+  
   return 'N/A';
 }
- 
+
 // Make functions globally available for viewer.js
 window.getAllIssues = getAllIssues;
 window.getIssuesFiltered = getIssuesFiltered;
