@@ -72,17 +72,32 @@ export async function getIssuesFiltered(projectId, filter) {
   const internal_token = localStorage.getItem('internal_tokenHemyIssue');
 
   const params = new URLSearchParams(filter);
-  const res = await fetch(
-    `${window.location.origin}/api/allIssues/${projectId}?${params}`, {
+  try {
+    const res = await fetch(
+      `${window.location.origin}/api/allIssues/${projectId}?${params}`, {
         headers: {
-            'Authorization': `Bearer ${token}`,  // Send authToken in the Authorization header
-            'x-refresh-token': refreshToken,         // Send refreshToken in a custom header
-            'x-expires-at': expires_at,              // Send expires_at in a custom header
-            'x-internal-token': internal_token       // Send internal_token in a custom header
-        }
-    });
-  //  console.log(res.json());
-  return await res.json();
+          Authorization: `Bearer ${token}`, // Send authToken in the Authorization header
+          "x-refresh-token": refreshToken, // Send refreshToken in a custom header
+          "x-expires-at": expires_at, // Send expires_at in a custom header
+          "x-internal-token": internal_token, // Send internal_token in a custom header
+        },
+      }
+    );
+
+    if (!res.ok) {
+      console.error(`getIssuesFiltered: HTTP ${res.status} ${res.statusText}`);
+      // Return an empty array so callers can continue gracefully
+      return [];
+    }
+
+    // Some endpoints may return empty bodies on error; guard against invalid JSON
+    const text = await res.text();
+    if (!text) return [];
+    return JSON.parse(text);
+  } catch (err) {
+    console.error("getIssuesFiltered: failed to fetch/parse issues", err);
+    return [];
+  }
 }
 
 // export async function initIssueDefs(projectId, containerId) {
@@ -358,6 +373,7 @@ export async function populateIssueList(parent, issues) {
         pushpin_SelectOne(issue.id, pushpin);
       }
     });
+    
   });
 }
 

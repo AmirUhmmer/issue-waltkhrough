@@ -599,6 +599,25 @@ export function initViewer(container) {
       viewer = new Autodesk.Viewing.GuiViewer3D(container, config);
       viewer.start();
       viewer.setTheme("light-theme");
+      // Track WebGL context state to avoid framebuffer errors when context is lost
+      viewer.__glContextLost = false;
+      try {
+        const canvas = viewer.impl?.canvas || viewer.container && viewer.container.querySelector && viewer.container.querySelector('canvas');
+        if (canvas) {
+          canvas.addEventListener('webglcontextlost', (ev) => {
+            console.warn('Viewer WebGL context lost');
+            viewer.__glContextLost = true;
+            ev.preventDefault();
+          }, false);
+          canvas.addEventListener('webglcontextrestored', () => {
+            console.info('Viewer WebGL context restored');
+            viewer.__glContextLost = false;
+            try { viewer.impl && viewer.impl.invalidate && viewer.impl.invalidate(true, true, true); } catch(e) { console.warn('invalidate after restore failed', e); }
+          }, false);
+        }
+      } catch (e) {
+        console.warn('Could not attach WebGL context handlers', e);
+      }
       
       viewer.setOptimizeNavigation(true)
       viewer.setQualityLevel(false, false);
@@ -1221,7 +1240,15 @@ async function modelLoaded(evt) {
         await loadIssuePushpins();
 
         // ✅ Force a redraw — PushPin sometimes misses initial invalidate()
-        viewer.impl.invalidate(true, true, true);
+        try {
+          if (!viewer.__glContextLost && viewer.impl && typeof viewer.impl.invalidate === 'function') {
+            viewer.impl.invalidate(true, true, true);
+          } else {
+            console.warn('Skipping invalidate() because GL context is lost or invalid');
+          }
+        } catch (e) {
+          console.warn('viewer.impl.invalidate() failed', e);
+        }
         console.log("🔁 Viewer invalidated after pushpin load");
       });
       
@@ -1999,6 +2026,8 @@ async function loadIssuesListFiltered(containerId, pushpin) {
     divSubIcon.innerHTML = innerSubIcon;
     divSubIcon.className = "sub-icon issue";
 
+    
+
     divSubIcon.onclick = (event) => {
       pushpinExt.selectOne(issue.id);
       $.each(issues, (index, issue_subicon) => {
@@ -2099,7 +2128,7 @@ async function loadIssuesList(containerId) {
                             <div class="d-flex" style="height: 20px; align-items: center;">
                                 <div style="border-radius: 5px; width: 5px; height: 20px; background-color: ${statusDisplay[issue.status].color
         }"></div>
-                                <small class="ms-1">${statusDisplay[issue.status].title
+                                <small class="ms-1 issue-status-toggle" data-issue-id="${issue.id}" data-status="${statusDisplay[issue.status].title}" data-type="${issue.issueTypeId || issue.issueSubtypeId || ''}">${statusDisplay[issue.status].title
         } &middot;</small>
                                 <a id="deviation-${issue.id
         }" target="_blank" href="${hemyLinkAttribute.value
@@ -3522,3 +3551,4 @@ function getFirstFragmentDescendants(model, dbId) {
 
   return [];
 }
+ 

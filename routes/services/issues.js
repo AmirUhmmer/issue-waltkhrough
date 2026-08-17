@@ -38,6 +38,12 @@ async function getIssues(containerId,
     const headers = config.endpoints.httpHeaders(config.credentials.token_3legged)
     const response = await get(endpoint, headers)
 
+    // Defensive: if response is not as expected, return current results
+    if (!response) {
+      console.error('getIssues: empty response for', endpoint);
+      return allIssues;
+    }
+
     if (response.results && response.results.length > 0) {
       console.log(`getting issues of container ${containerId}`)
       allIssues = allIssues.concat(response.results);
