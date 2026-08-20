@@ -33,8 +33,9 @@ async function getIssues(containerId,
       + `?offset=${offset}&limit=${limit}&sortBy=-displayId`
     //apply with filters
     Object.keys(filters).forEach(e => {
-      endpoint += `&filter[${e}]=${filters[e]}`
+      endpoint += `&filter[${e}]=${encodeURIComponent(filters[e])}`
     });
+    console.log('getIssues endpoint:', endpoint);
     const headers = config.endpoints.httpHeaders(config.credentials.token_3legged)
     const response = await get(endpoint, headers)
 
@@ -44,12 +45,22 @@ async function getIssues(containerId,
       return allIssues;
     }
 
-    if (response.results && response.results.length > 0) {
+    const results = Array.isArray(response.results)
+      ? response.results
+      : Array.isArray(response.data)
+        ? response.data
+        : [];
+
+    if (results.length > 0) {
       console.log(`getting issues of container ${containerId}`)
-      allIssues = allIssues.concat(response.results);
-      if (response.pagination.totalResults > allIssues.length) {
+      allIssues = allIssues.concat(results);
+      const totalResults = response.pagination?.totalResults;
+      if (
+        (Number.isFinite(totalResults) && totalResults > allIssues.length) ||
+        (!Number.isFinite(totalResults) && results.length === limit)
+      ) {
         offset += 100
-        return getIssues(containerId, allIssues, offset);
+        return getIssues(containerId, allIssues, offset, limit, filters);
       }
       else {
         return allIssues
@@ -59,7 +70,7 @@ async function getIssues(containerId,
     }
   } catch (e) {
     console.error(`getting issues of  ${containerId} failed: ${e}`)
-    return {}
+    throw e;
   }
 }
 

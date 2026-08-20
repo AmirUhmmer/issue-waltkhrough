@@ -64,42 +64,218 @@ export async function getAllIssues(projectId, filter) {
   //  console.log(res.json());
   return await res.json();
 }
+export async function getIssuesFiltered(projectId, filter = {}) {
 
-export async function getIssuesFiltered(projectId, filter) {
-  const token = localStorage.getItem('authTokenHemyIssue');
-  const refreshToken = localStorage.getItem('refreshTokenHemyIssue');
-  const expires_at = localStorage.getItem('expires_atHemyIssue');
-  const internal_token = localStorage.getItem('internal_tokenHemyIssue');
+  const token =
+    localStorage.getItem("authTokenHemyIssue");
 
-  const params = new URLSearchParams(filter);
+  const refreshToken =
+    localStorage.getItem("refreshTokenHemyIssue");
+
+  const expires_at =
+    localStorage.getItem("expires_atHemyIssue");
+
+  const internal_token =
+    localStorage.getItem("internal_tokenHemyIssue");
+
+  // ---------------------------------------------------------
+  // BUILD QUERY PARAMETERS
+  // ---------------------------------------------------------
+
+  const params = new URLSearchParams();
+
+  Object.entries(filter).forEach(
+    ([key, value]) => {
+
+      if (
+        value !== undefined &&
+        value !== null &&
+        value !== ""
+      ) {
+        params.append(
+          key,
+          value
+        );
+      }
+
+    }
+  );
+
+  const url =
+    `${window.location.origin}/api/allIssues/${projectId}?${params.toString()}`;
+
+  console.log(
+    "========================================"
+  );
+
+  console.log(
+    "getIssuesFiltered CALLED"
+  );
+
+  console.log(
+    "Project ID:",
+    projectId
+  );
+
+  console.log(
+    "Filter:",
+    filter
+  );
+
+  console.log(
+    "Query String:",
+    params.toString()
+  );
+
+  console.log(
+    "FINAL URL:",
+    url
+  );
+
+  console.log(
+    "========================================"
+  );
+
   try {
+
     const res = await fetch(
-      `${window.location.origin}/api/allIssues/${projectId}?${params}`, {
+      url,
+      {
         headers: {
-          Authorization: `Bearer ${token}`, // Send authToken in the Authorization header
-          "x-refresh-token": refreshToken, // Send refreshToken in a custom header
-          "x-expires-at": expires_at, // Send expires_at in a custom header
-          "x-internal-token": internal_token, // Send internal_token in a custom header
-        },
+
+          Authorization:
+            `Bearer ${token}`,
+
+          "x-refresh-token":
+            refreshToken,
+
+          "x-expires-at":
+            expires_at,
+
+          "x-internal-token":
+            internal_token
+
+        }
       }
     );
 
+    console.log(
+      "HTTP STATUS:",
+      res.status
+    );
+
+    console.log(
+      "HTTP STATUS TEXT:",
+      res.statusText
+    );
+
     if (!res.ok) {
-      console.error(`getIssuesFiltered: HTTP ${res.status} ${res.statusText}`);
-      // Return an empty array so callers can continue gracefully
+
+      const errorText =
+        await res.text();
+
+      console.error(
+        "getIssuesFiltered HTTP ERROR:",
+        res.status,
+        res.statusText
+      );
+
+      console.error(
+        "SERVER RESPONSE:",
+        errorText
+      );
+
       return [];
     }
 
-    // Some endpoints may return empty bodies on error; guard against invalid JSON
-    const text = await res.text();
-    if (!text) return [];
-    return JSON.parse(text);
+    // -------------------------------------------------------
+    // READ RESPONSE
+    // -------------------------------------------------------
+
+    const text =
+      await res.text();
+
+    console.log(
+      "RAW SERVER RESPONSE:",
+      text
+    );
+
+    if (!text) {
+
+      console.warn(
+        "getIssuesFiltered returned EMPTY response"
+      );
+
+      return [];
+    }
+
+    // -------------------------------------------------------
+    // PARSE JSON
+    // -------------------------------------------------------
+
+    let data;
+
+    try {
+
+      data =
+        JSON.parse(text);
+
+    } catch (parseError) {
+
+      console.error(
+        "JSON PARSE ERROR:",
+        parseError
+      );
+
+      console.error(
+        "INVALID RESPONSE:",
+        text
+      );
+
+      return [];
+    }
+
+    console.log(
+      "PARSED DATA:",
+      data
+    );
+
+    console.log(
+      "DATA TYPE:",
+      typeof data
+    );
+
+    console.log(
+      "IS ARRAY:",
+      Array.isArray(data)
+    );
+
+    if (Array.isArray(data)) {
+
+      console.log(
+        "NUMBER OF ISSUES:",
+        data.length
+      );
+
+    }
+
+    return data;
+
   } catch (err) {
-    console.error("getIssuesFiltered: failed to fetch/parse issues", err);
+
+    console.error(
+      "getIssuesFiltered FETCH ERROR:",
+      err
+    );
+
+    console.error(
+      "ERROR MESSAGE:",
+      err?.message
+    );
+
     return [];
   }
 }
-
 // export async function initIssueDefs(projectId, containerId) {
 //   const res = await fetch(`/api/issueDataMap/${projectId}/${containerId}`);
 //   await getIssueSubTypes(containerId);

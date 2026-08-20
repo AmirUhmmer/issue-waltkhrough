@@ -259,14 +259,40 @@ service.authRefreshMiddleware = async (req, res, next) => {
     //   return res.status(401).end();
     // }
 
-    refresh_token = req.headers["x-refresh-token"];
-    expires_at = req.headers["x-expires-at"];
-    internal_token = req.headers["x-internal-token"];
+    // Prefer the server session. Browser headers can contain an older token
+    // from a previous login and must not replace newer session credentials.
+    const headerRefreshToken = req.headers["x-refresh-token"];
+    const headerExpiresAt = req.headers["x-expires-at"];
+    const headerInternalToken = req.headers["x-internal-token"];
+    const authorization = req.headers.authorization || "";
+    const bearerToken = authorization.startsWith("Bearer ")
+      ? authorization.slice("Bearer ".length)
+      : null;
 
-    console.log("Using refresh token:", refresh_token);
-    console.log("Token expires at:", expires_at, "which is", new Date(expires_at));
-    console.log(expires_at < Date.now());
-    if (expires_at < Date.now()) {
+    refresh_token = refresh_token || (headerRefreshToken && headerRefreshToken !== "null"
+      ? headerRefreshToken
+      : null);
+    expires_at = expires_at || (headerExpiresAt && headerExpiresAt !== "null"
+      ? headerExpiresAt
+      : null);
+    internal_token = bearerToken || internal_token || (headerInternalToken && headerInternalToken !== "null"
+      ? headerInternalToken
+      : null);
+
+    if (!internal_token) {
+      return res.status(401).json({ error: "Missing Autodesk access token" });
+    }
+
+    console.log("Refresh token present:", Boolean(refresh_token));
+    const expiresAtMs = Number(expires_at);
+    console.log("Token expires at:", expiresAtMs, "which is", new Date(expiresAtMs));
+    console.log(expiresAtMs < Date.now());
+    if (!Number.isFinite(expiresAtMs) || expiresAtMs < Date.now()) {
+      if (!refresh_token) {
+        return res.status(401).json({ error: "Missing Autodesk refresh token" });
+      }
+
+      try {
         const internalCredentials = await authenticationClient.refreshToken(refresh_token, APS_CLIENT_ID, {
             clientSecret: APS_CLIENT_SECRET,
             scopes: [Scopes.DataRead, Scopes.DataCreate]
@@ -279,15 +305,25 @@ service.authRefreshMiddleware = async (req, res, next) => {
         req.session.internal_token = internalCredentials.access_token;
         req.session.refresh_token = publicCredentials.refresh_token;
         req.session.expires_at = Date.now() + internalCredentials.expires_in * 1000;
+        internal_token = req.session.internal_token;
+        refresh_token = req.session.refresh_token;
+        expires_at = req.session.expires_at;
+      } catch (error) {
+        console.error("Autodesk token refresh failed:", error.message);
+        return res.status(401).json({
+          error: "Autodesk authentication expired",
+          details: error.message
+        });
+      }
     }
 
     req.internalOAuthToken = {
         access_token: internal_token,
-        expires_in: Math.round((req.session.expires_at - Date.now()) / 1000),
+      expires_in: Math.round((Number(expires_at) - Date.now()) / 1000),
     };
     req.publicOAuthToken = {
         access_token: req.session.public_token,
-        expires_in: Math.round((req.session.expires_at - Date.now()) / 1000),
+      expires_in: Math.round((Number(expires_at) - Date.now()) / 1000),
     };
     next();
 };
@@ -299,12 +335,21 @@ service.getUserProfile = async (accessToken) => {
 };
 
 service.getUserProfileBackend = async (token) => {
-  const resp = await axios.get("https://api.userprofile.autodesk.com/userinfo", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  return resp.data;
+  try {
+    const resp = await axios.get("https://api.userprofile.autodesk.com/userinfo", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return resp.data;
+  } catch (error) {
+    console.error("Autodesk user profile request failed:", {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
+    throw error;
+  }
 };
 
 service.getTokens = async (email) => {
