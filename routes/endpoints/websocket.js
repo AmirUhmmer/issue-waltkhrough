@@ -9,7 +9,7 @@ function createwssRoutes(clients) {
         const {userid} = req.params;
         try {
             const client = clients.get(userid);
-            console.log('client.readyState', client.readyState);
+          console.log('client.readyState', client?.readyState);
             if (client && client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify(message));
             }

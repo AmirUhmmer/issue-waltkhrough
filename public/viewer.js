@@ -1861,337 +1861,1245 @@ async function loadIssuePushpins(filter = {}) {
 }
 // #endregion
 
-
 // ! pushpin filtered
 // #region: pushpin filtered
+
 // Export for viewer pages
 export async function loadIssuePushpinsFiltered(issueStatus, issueSubtype) {
-  console.log('Filter Issues Called');
-  pushpinExt = await viewer.loadExtension("Autodesk.BIM360.Extension.PushPin");
+  console.log("========================================");
+  console.log("Filter Issues Called");
+  console.log("Issue Status:", issueStatus);
+  console.log("Issue Subtype:", issueSubtype);
+  console.log("Selected Project:", selectedProject);
+  console.log("========================================");
 
-  // Ensure issue titles are applied to newly created pushpins.
+  // ---------------------------------------------------------
+  // LOAD PUSH PIN EXTENSION
+  // ---------------------------------------------------------
+
+  pushpinExt = await viewer.loadExtension(
+    "Autodesk.BIM360.Extension.PushPin"
+  );
+
+  // ---------------------------------------------------------
+  // PUSH PIN CREATED EVENT
+  // ---------------------------------------------------------
+
   if (!pushpinExt.__issueHoverTitlesCreatedBound) {
     pushpinExt.__issueHoverTitlesCreatedBound = true;
-    pushpinExt.pushPinManager.addEventListener("pushpin.created", (e) => {
-      const itemData = e?.value?.itemData;
-      if (!itemData?.id) return;
-      const label = itemData.label || "Issue";
-      attachPushpinHoverTitles([{ id: itemData.id, label }], 0, pushpinExt);
-    });
+
+    pushpinExt.pushPinManager.addEventListener(
+      "pushpin.created",
+      (e) => {
+        const itemData = e?.value?.itemData;
+
+        if (!itemData?.id) {
+          return;
+        }
+
+        const label = itemData.label || "Issue";
+
+        attachPushpinHoverTitles(
+          [{ id: itemData.id, label }],
+          0,
+          pushpinExt
+        );
+      }
+    );
   }
 
-  pushpinExt.pushPinManager.addEventListener(
-    "pushpin.selected",
-    async function (e) {
-      //  console.log(e);
-      const pushPinItem = e.value;
-      const pushPinList = e.target.pushPinList;
-      pushPinList.forEach((pushpin) => {
-        const unselectedPusPinsDiv = document.getElementById(
-          pushpin.itemData.id
-        );
-        if (!unselectedPusPinsDiv.classList.contains("selected")) {
-          unselectedPusPinsDiv.classList.add("unselected");
-        } else {
-          unselectedPusPinsDiv.classList.remove("unselected");
+  // ---------------------------------------------------------
+  // PUSH PIN SELECTED EVENT
+  // ---------------------------------------------------------
+
+  if (!pushpinExt.__issueSelectedBound) {
+    pushpinExt.__issueSelectedBound = true;
+
+    pushpinExt.pushPinManager.addEventListener(
+      "pushpin.selected",
+      async function (e) {
+        const pushPinList = e?.target?.pushPinList;
+
+        if (!pushPinList) {
+          return;
         }
-      });
-    }
-  );
+
+        pushPinList.forEach((pushpin) => {
+          const pushpinId = pushpin?.itemData?.id;
+
+          if (!pushpinId) {
+            return;
+          }
+
+          const pushpinDiv =
+            document.getElementById(pushpinId);
+
+          if (!pushpinDiv) {
+            return;
+          }
+
+          if (
+            !pushpinDiv.classList.contains("selected")
+          ) {
+            pushpinDiv.classList.add("unselected");
+          } else {
+            pushpinDiv.classList.remove("unselected");
+          }
+        });
+      }
+    );
+  }
+
+  // ---------------------------------------------------------
+  // REMOVE OLD PUSHPINS
+  // ---------------------------------------------------------
+
   pushpinExt.removeAllItems();
   pushpinExt.showAll();
-  // const filter = {
-  //   "filter[linkedDocumentUrn]": selectedProjectItem.relationships.item.data.id,
-  // };
 
-  let pushpin = [];
-  console.log("Selected Project for Pushpins", selectedProject);
+  // ---------------------------------------------------------
+  // BUILD FILTER
+  // ---------------------------------------------------------
+
   const filter = {};
-  if (issueStatus) filter.status = issueStatus;
-  if (issueSubtype) filter.issueSubtypeId = issueSubtype;
-  
-  const allIssues = await getIssuesFiltered(selectedProject, filter);
-  const openOnlyIssues = Array.isArray(allIssues) ? allIssues.filter((issue) => issue.status === "open") : [];
-  console.log('All Issues', openOnlyIssues)
-  $.each(openOnlyIssues, (index, issue) => {
-    //  console.log(issue);
-    const pushpinDetails =
-      issue.linkedDocuments.length > 0
-        ? issue.linkedDocuments[0].details
-        : null;
 
-    if (pushpinDetails && pushpinDetails.position) {
-      pushpin.push({
-        type: "issues",
-        id: issue.id,
-        label: `#${issue.displayId} - ${issue.title}`,
-        status: issue.status,
-        position: pushpinDetails.position,
-        objectId: pushpinDetails.objectId,
-        viewerState: pushpinDetails.viewerState,
-      });
-    }
+  /*
+   * Only add status if a real status was selected.
+   *
+   * Examples:
+   *
+   * Open:
+   * { status: "open" }
+   *
+   * Closed:
+   * { status: "closed" }
+   *
+   * No status:
+   * {}
+   */
+
+  if (
+    issueStatus &&
+    issueStatus !== "all" &&
+    issueStatus !== "All"
+  ) {
+    filter.status = issueStatus;
+  }
+
+  /*
+   * Only add subtype if a real subtype was selected.
+   */
+
+  if (
+    issueSubtype &&
+    issueSubtype !== "all" &&
+    issueSubtype !== "All"
+  ) {
+    filter.issueSubtypeId = issueSubtype;
+  }
+
+  console.log(
+    "FILTER SENT TO getIssuesFiltered:",
+    filter
+  );
+
+  // ---------------------------------------------------------
+  // GET ISSUES
+  // ---------------------------------------------------------
+
+  let allIssues = [];
+
+  try {
+    allIssues = await getIssuesFiltered(
+      selectedProject,
+      filter
+    );
+  } catch (error) {
+    console.error(
+      "ERROR getting filtered issues:",
+      error
+    );
+
+    return;
+  }
+
+  console.log(
+    "RAW ISSUES RETURNED:",
+    allIssues
+  );
+
+  console.log(
+    "RAW ISSUE COUNT:",
+    Array.isArray(allIssues)
+      ? allIssues.length
+      : "NOT AN ARRAY"
+  );
+
+  // ---------------------------------------------------------
+  // VALIDATE RESPONSE
+  // ---------------------------------------------------------
+
+  if (!Array.isArray(allIssues)) {
+    console.error(
+      "getIssuesFiltered did not return an array:",
+      allIssues
+    );
+
+    return;
+  }
+
+  // ---------------------------------------------------------
+  // APPLY CLIENT-SIDE FILTER
+  // ---------------------------------------------------------
+  //
+  // IMPORTANT:
+  //
+  // We DO NOT automatically filter to "open".
+  //
+  // Your old code did:
+  //
+  // issue.status === "open"
+  //
+  // That meant Closed, Pending, In Review, etc.
+  // could never appear.
+  //
+  // Now we respect the selected status.
+  // ---------------------------------------------------------
+
+  const normalizedStatus = String(issueStatus || "").toLowerCase();
+  const normalizedSubtype = String(issueSubtype || "").toLowerCase();
+
+  const subtypeSummary = Object.values(
+    allIssues.reduce((summary, issue) => {
+      const subtypeId = issue?.issueSubtypeId || "(missing)";
+      const key = String(subtypeId).toLowerCase();
+      if (!summary[key]) summary[key] = { id: subtypeId, total: 0, open: 0 };
+      summary[key].total += 1;
+      if (String(issue?.status || "").toLowerCase() === "open") {
+        summary[key].open += 1;
+      }
+      return summary;
+    }, {})
+  );
+  console.log("AVAILABLE SUBTYPE SUMMARY:", subtypeSummary);
+
+  const selectedSubtypeExists =
+    !normalizedSubtype ||
+    normalizedSubtype === "all" ||
+    subtypeSummary.some(
+      (subtype) => String(subtype.id).toLowerCase() === normalizedSubtype
+    );
+
+  if (!selectedSubtypeExists) {
+    console.warn(
+      "Selected subtype is not present in this project's issue data:",
+      issueSubtype
+    );
+  }
+
+  const filteredIssues = allIssues.filter((issue) => {
+    if (!issue) return false;
+
+    const statusMatches =
+      !normalizedStatus ||
+      normalizedStatus === "all" ||
+      String(issue.status || "").toLowerCase() === normalizedStatus;
+
+    const subtypeValue =
+      issue.issueSubtypeId ||
+      issue.issueSubtype?.id ||
+      issue.subtype?.id ||
+      "";
+    const subtypeMatches =
+      !normalizedSubtype ||
+      normalizedSubtype === "all" ||
+      String(subtypeValue).toLowerCase() === normalizedSubtype;
+
+    return statusMatches && subtypeMatches;
   });
-  pushpinExt.loadItemsV2(pushpin);
-  attachPushpinHoverTitles(pushpin, 0, pushpinExt);
-  console.log("Pushpin Manager", pushpin);
-  loadIssuesListFiltered(selectedProject, pushpin);
+
+  console.log(
+    "FILTERED ISSUES:",
+    filteredIssues
+  );
+
+  console.log(
+    "FILTERED ISSUE COUNT:",
+    filteredIssues.length
+  );
+
+  // ---------------------------------------------------------
+  // CREATE PUSHPINS
+  // ---------------------------------------------------------
+
+  const pushpin = [];
+
+  $.each(
+    filteredIssues,
+    (index, issue) => {
+
+      console.log(
+        `Processing Issue ${index + 1}:`,
+        {
+          id: issue.id,
+          displayId: issue.displayId,
+          title: issue.title,
+          status: issue.status,
+          issueSubtypeId: issue.issueSubtypeId,
+          issueTypeId: issue.issueTypeId,
+          linkedDocuments:
+            issue.linkedDocuments
+        }
+      );
+
+      // -----------------------------------------------------
+      // LINKED DOCUMENTS
+      // -----------------------------------------------------
+
+      const linkedDocuments =
+        Array.isArray(issue.linkedDocuments)
+          ? issue.linkedDocuments
+          : [];
+
+      const linkedDocument = linkedDocuments.find(
+        (document) => document?.details?.position
+      );
+      const pushpinDetails = linkedDocument?.details || null;
+
+      console.log(
+        "Pushpin Details:",
+        pushpinDetails
+      );
+
+      // -----------------------------------------------------
+      // CHECK PUSH PIN POSITION
+      // -----------------------------------------------------
+
+      if (
+        pushpinDetails &&
+        pushpinDetails.position
+      ) {
+
+        console.log(
+          "CREATING PUSHPIN:",
+          issue.id
+        );
+
+        pushpin.push({
+
+          type: "issues",
+
+          id: issue.id,
+
+          label:
+            `#${issue.displayId} - ${issue.title}`,
+
+          status:
+            issue.status,
+
+          // Keep original issue information
+          // for the sidebar.
+          customAttributes:
+            Array.isArray(issue.customAttributes)
+              ? issue.customAttributes
+              : [],
+
+          issueSubtypeId:
+            issue.issueSubtypeId,
+
+          issueTypeId:
+            issue.issueTypeId,
+
+          displayId:
+            issue.displayId,
+
+          title:
+            issue.title,
+
+          position:
+            pushpinDetails.position,
+
+          objectId:
+            pushpinDetails.objectId,
+
+          viewerState:
+            pushpinDetails.viewerState
+        });
+
+      } else {
+
+        console.warn(
+          "SKIPPING ISSUE - NO PUSH PIN POSITION:",
+          {
+            id: issue.id,
+            displayId: issue.displayId,
+            title: issue.title,
+            status: issue.status,
+            linkedDocuments:
+              issue.linkedDocuments,
+            pushpinDetails:
+              pushpinDetails
+          }
+        );
+      }
+    }
+  );
+
+  // ---------------------------------------------------------
+  // FINAL PUSH PIN DEBUG
+  // ---------------------------------------------------------
+
+  console.log(
+    "========================================"
+  );
+
+  console.log(
+    "FINAL PUSHPINS:",
+    pushpin
+  );
+
+  console.log(
+    "FINAL PUSHPIN COUNT:",
+    pushpin.length
+  );
+
+  console.log(
+    "========================================"
+  );
+
+  // ---------------------------------------------------------
+  // LOAD PUSH PINS INTO VIEWER
+  // ---------------------------------------------------------
+
+  if (pushpin.length > 0) {
+
+    pushpinExt.loadItemsV2(
+      pushpin
+    );
+
+    attachPushpinHoverTitles(
+      pushpin,
+      0,
+      pushpinExt
+    );
+
+  } else {
+
+    console.warn(
+      "NO PUSHPINS TO LOAD INTO VIEWER"
+    );
+  }
+
+  console.log(
+    "Pushpin Manager:",
+    pushpin
+  );
+
+  // ---------------------------------------------------------
+  // LOAD SIDEBAR
+  // ---------------------------------------------------------
+
+  loadIssuesListFiltered(
+    selectedProject,
+    pushpin
+  );
 }
+
 // #endregion
+
+
+// =========================================================
+// LOAD ISSUES LIST FILTERED
+// =========================================================
 
 // #region: Load Issues List Filtered
-async function loadIssuesListFiltered(containerId, pushpin) {
-  const divIssueSidebar = document.getElementById("issues-sidebar-items");
-  divIssueSidebar.innerHTML = "";
-  //console.log(allIssues);
 
-  const issues = pushpin;
-  // console.log("Issues", issues);
-  $.each(issues, (index, issue) => {
-    if (issue.status !== "open") {
-      return;
-    }
-    const divSubIcon = document.createElement("div");
-    const customAttributes = Array.isArray(issue.customAttributes) ? issue.customAttributes : [];
-    const findHemyXLink = customAttributes.filter(
-      (attributes) => attributes.title === "Hemy X Link"
+async function loadIssuesListFiltered(
+  containerId,
+  pushpin
+) {
+
+  const divIssueSidebar =
+    document.getElementById(
+      "issues-sidebar-items"
     );
-    const hemyLinkAttribute = findHemyXLink[0];
-    //   console.log(hemyLinkAttribute);
-    let innerSubIcon = "";
 
-    divSubIcon.setAttribute("id", `div-issue-subicon-${issue.id}`);
+  if (!divIssueSidebar) {
 
-    const statusDisplay = {
-      open: {
-        title: "Open",
-        color: "#f5bf42",
-      },
-      draft: {
-        title: "Draft",
-        color: "#000000",
-      },
-      pending: {
-        title: "Pending",
-        color: "blue",
-      },
-      in_review: {
-        title: "In Review",
-        color: "purple",
-      },
-      closed: {
-        title: "Closed",
-        color: "gray",
-      },
-    };
-    // console.log("TEST:",hemyLinkAttribute);
-    // console.log("TEST:",hemyLinkAttribute.value);
-    if (hemyLinkAttribute && hemyLinkAttribute.value) {
-      innerSubIcon = ` <div class="d-block justify-content-between">
-                            <div class="d-flex">
-                               <h6 class="mb-1 fw-bold">${issue.label}</h6>
-                            </div>
-                            <div class="d-flex" style="height: 20px; align-items: center;">
-                                <div style="border-radius: 5px; width: 5px; height: 20px; background-color: ${statusDisplay[issue.status].color
-        }"></div>
-                                <small class="ms-1">${statusDisplay[issue.status].title
-        } &middot;</small>
-                                <a id="deviation-${issue.id
-        }" target="_blank" href="${hemyLinkAttribute.value
-        }" title="Go to record"
-                                    style="color: #495057;" class="ms-2">
-                                    <svg class="w-[18px] h-[18px] text-gray-800 dark:text-white" aria-hidden="true"
-                                        xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
-                                        viewBox="0 0 24 24">
-                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M3 15v3c0 .5523.44772 1 1 1h9.5M3 15v-4m0 4h9m-9-4V6c0-.55228.44772-1 1-1h16c.5523 0 1 .44772 1 1v5H3Zm5 0v8m4-8v8m7.0999-1.0999L21 16m0 0-1.9001-1.9001M21 16h-5" />
-                                    </svg>
-                                </a>
-                            </div>
-                        </div>`;
-    } else {
-      innerSubIcon = ` <div class="d-block justify-content-between">
-                            <div class="d-flex">
-                               <h6 class="mb-1 fw-bold">${issue.label}</h6>
-                            </div>
-                            <div class="d-flex" style="height: 20px; align-items: center;">
-                                <div style="border-radius: 5px; width: 5px; height: 20px; background-color: ${statusDisplay[issue.status].color
-        }"></div>
-                                <small class="ms-1">${statusDisplay[issue.status].title
-        } &middot;</small>
-                            </div>
-                        </div>`;
+    console.error(
+      "issues-sidebar-items element not found"
+    );
+
+    return;
+  }
+
+  // Clear existing sidebar
+  divIssueSidebar.innerHTML = "";
+
+  const issues =
+    Array.isArray(pushpin)
+      ? pushpin
+      : [];
+
+  console.log(
+    "Loading Sidebar Issues:",
+    issues
+  );
+
+  // ---------------------------------------------------------
+  // STATUS DISPLAY
+  // ---------------------------------------------------------
+
+  const statusDisplay = {
+
+    open: {
+      title: "Open",
+      color: "#f5bf42"
+    },
+
+    draft: {
+      title: "Draft",
+      color: "#000000"
+    },
+
+    pending: {
+      title: "Pending",
+      color: "#001ee0ff"
+    },
+
+    in_review: {
+      title: "In Review",
+      color: "#8300e0ff"
+    },
+
+    closed: {
+      title: "Closed",
+      color: "#39393bff"
+    },
+
+    completed: {
+      title: "Closed",
+      color: "#39393bff"
     }
-    divSubIcon.innerHTML = innerSubIcon;
-    divSubIcon.className = "sub-icon issue";
 
-    
+  };
 
-    divSubIcon.onclick = (event) => {
-      pushpinExt.selectOne(issue.id);
-      $.each(issues, (index, issue_subicon) => {
-        const subicon = document.getElementById(
-          `div-issue-subicon-${issue_subicon.id}`
+  // ---------------------------------------------------------
+  // CREATE SIDEBAR ITEMS
+  // ---------------------------------------------------------
+
+  $.each(
+    issues,
+    (index, issue) => {
+
+      if (!issue) {
+        return;
+      }
+
+      console.log(
+        "Creating Sidebar Item:",
+        issue
+      );
+
+      const divSubIcon =
+        document.createElement("div");
+
+      // -----------------------------------------------------
+      // CUSTOM ATTRIBUTES
+      // -----------------------------------------------------
+
+      const customAttributes =
+        Array.isArray(
+          issue.customAttributes
+        )
+          ? issue.customAttributes
+          : [];
+
+      const findHemyXLink =
+        customAttributes.filter(
+          (attributes) =>
+            attributes.title ===
+            "Hemy X Link"
         );
-        if (
-          divSubIcon.getAttribute("id") ===
-          `div-issue-subicon-${issue_subicon.id}`
-        ) {
-          subicon.classList.add("active");
-        } else {
-          subicon.classList.remove("active");
-        }
-      });
-      //console.log(divSubIcon.getAttribute("id"));
-    };
 
-    divIssueSidebar.appendChild(divSubIcon);
-  });
+      const hemyLinkAttribute =
+        findHemyXLink[0];
+
+      // -----------------------------------------------------
+      // STATUS
+      // -----------------------------------------------------
+
+      const currentStatus =
+        statusDisplay[issue.status] || {
+          title:
+            issue.status || "Unknown",
+
+          color:
+            "#6c757d"
+        };
+
+      // -----------------------------------------------------
+      // SIDEBAR ITEM ID
+      // -----------------------------------------------------
+
+      divSubIcon.setAttribute(
+        "id",
+        `div-issue-subicon-${issue.id}`
+      );
+
+      let innerSubIcon = "";
+
+      // -----------------------------------------------------
+      // HEMY X LINK
+      // -----------------------------------------------------
+
+      if (
+        hemyLinkAttribute &&
+        hemyLinkAttribute.value
+      ) {
+
+        innerSubIcon = `
+          <div class="d-block justify-content-between">
+
+            <div class="d-flex">
+              <h6 class="mb-1 fw-bold">
+                ${issue.label}
+              </h6>
+            </div>
+
+            <div
+              class="d-flex"
+              style="
+                height: 20px;
+                align-items: center;
+              "
+            >
+
+              <div
+                style="
+                  border-radius: 5px;
+                  width: 5px;
+                  height: 20px;
+                  background-color:
+                    ${currentStatus.color};
+                "
+              ></div>
+
+              <small class="ms-1">
+                ${currentStatus.title}
+                &middot;
+              </small>
+
+              <a
+                id="deviation-${issue.id}"
+                target="_blank"
+                href="${hemyLinkAttribute.value}"
+                title="Go to record"
+                style="color: #495057;"
+                class="ms-2"
+              >
+
+                <svg
+                  class="w-[18px] h-[18px]
+                    text-gray-800
+                    dark:text-white"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+
+                  <path
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="
+                      M3 15v3c0 .5523
+                      .44772 1 1 1h9.5
+                      M3 15v-4m0 4h9m-9-4V6
+                      c0-.55228.44772-1 1-1h16
+                      c.5523 0 1 .44772 1 1v5H3Zm5
+                      0v8m4-8v8m7.0999-1.0999L21 16m0 0
+                      -1.9001-1.9001M21 16h-5
+                    "
+                  />
+
+                </svg>
+
+              </a>
+
+            </div>
+
+          </div>
+        `;
+
+      } else {
+
+        // ---------------------------------------------------
+        // NO HEMY LINK
+        // ---------------------------------------------------
+
+        innerSubIcon = `
+          <div class="d-block justify-content-between">
+
+            <div class="d-flex">
+              <h6 class="mb-1 fw-bold">
+                ${issue.label}
+              </h6>
+            </div>
+
+            <div
+              class="d-flex"
+              style="
+                height: 20px;
+                align-items: center;
+              "
+            >
+
+              <div
+                style="
+                  border-radius: 5px;
+                  width: 5px;
+                  height: 20px;
+                  background-color:
+                    ${currentStatus.color};
+                "
+              ></div>
+
+              <small class="ms-1">
+                ${currentStatus.title}
+                &middot;
+              </small>
+
+            </div>
+
+          </div>
+        `;
+      }
+
+      // -----------------------------------------------------
+      // INSERT HTML
+      // -----------------------------------------------------
+
+      divSubIcon.innerHTML =
+        innerSubIcon;
+
+      divSubIcon.className =
+        "sub-icon issue";
+
+      // -----------------------------------------------------
+      // CLICK SIDEBAR ISSUE
+      // -----------------------------------------------------
+
+      divSubIcon.onclick = () => {
+
+        console.log(
+          "Sidebar Issue Selected:",
+          issue.id
+        );
+
+        // Select corresponding viewer pushpin
+        pushpinExt.selectOne(
+          issue.id
+        );
+
+        // ---------------------------------------------------
+        // UPDATE ACTIVE SIDEBAR ITEM
+        // ---------------------------------------------------
+
+        $.each(
+          issues,
+          (index, issue_subicon) => {
+
+            const subicon =
+              document.getElementById(
+                `div-issue-subicon-${issue_subicon.id}`
+              );
+
+            if (!subicon) {
+              return;
+            }
+
+            if (
+              divSubIcon.getAttribute("id") ===
+              `div-issue-subicon-${issue_subicon.id}`
+            ) {
+
+              subicon.classList.add(
+                "active"
+              );
+
+            } else {
+
+              subicon.classList.remove(
+                "active"
+              );
+            }
+
+          }
+        );
+      };
+
+      // -----------------------------------------------------
+      // ADD SIDEBAR ITEM
+      // -----------------------------------------------------
+
+      divIssueSidebar.appendChild(
+        divSubIcon
+      );
+    }
+  );
+
+  console.log(
+    "Sidebar Issue Count:",
+    issues.length
+  );
 }
+
 // #endregion
 
 
+// =========================================================
+// LOAD ISSUES LIST
+// =========================================================
 
-
-// * Load Issues List
 // #region: Load Issues List
-async function loadIssuesList(containerId) {
-  const divIssueSidebar = document.getElementById("issues-sidebar-items");
+
+async function loadIssuesList(
+  containerId
+) {
+
+  const divIssueSidebar =
+    document.getElementById(
+      "issues-sidebar-items"
+    );
+
+  if (!divIssueSidebar) {
+
+    console.error(
+      "issues-sidebar-items element not found"
+    );
+
+    return;
+  }
+
   divIssueSidebar.innerHTML = "";
-  //console.log(allIssues);
 
   let issues = [];
+
+  // ---------------------------------------------------------
+  // GET ALL ISSUES
+  // ---------------------------------------------------------
+
   try {
+
     if (window.getAllIssues) {
-      issues = await window.getAllIssues(containerId);
-    } else {
-      console.error("getAllIssues not available");
-    }
-  } catch (error) {
-    console.error("Error getting issues:", error);
-  }
-  issues = Array.isArray(issues) ? issues.filter((issue) => issue.status === "open") : [];
-  // console.log("Issues", issues);
-  $.each(issues, (index, issue) => {
-    // ! BS19
-    // #region: bandaid solution bs19
-    if(containerId == "1c8224f1-b860-4a2b-821b-d393c94b190d" && (issue.issueTypeId != "318b5e55-0eef-4d61-9059-927fd4d40134" || issue.issueTypeId != "318b5e55-0eef-4d61-9059-927fd4d40134")){
-      return;
-    };
-    // #endregion
-    const divSubIcon = document.createElement("div");
-    const customAttributes = issue.customAttributes;
-    const findHemyXLink = customAttributes.filter(
-      (attributes) => attributes.title === "Hemy X Link"
-    );
-    const hemyLinkAttribute = findHemyXLink[0];
-    //   console.log(hemyLinkAttribute);
-    let innerSubIcon = "";
 
-    divSubIcon.setAttribute("id", `div-issue-subicon-${issue.id}`);
-
-    const statusDisplay = {
-      open: {
-        title: "Open",
-        color: "#f5bf42",
-      },
-      draft: {
-        title: "Draft",
-        color: "#000000",
-      },
-      pending: {
-        title: "Pending",
-        color: "#001ee0ff",
-      },
-      in_review: {
-        title: "In Review",
-        color: "#8300e0ff",
-      },
-      closed: {
-        title: "Closed",
-        color: "#39393bff",
-      },
-      completed: {
-        title: "Closed",
-        color: "#39393bff",
-      },
-    };
-    // console.log("TEST:",hemyLinkAttribute);
-    // console.log("TEST:",hemyLinkAttribute.value);
-    if (hemyLinkAttribute && hemyLinkAttribute.value) {
-      innerSubIcon = ` <div class="d-block justify-content-between">
-                            <div class="d-flex">
-                               <h6 class="mb-1 fw-bold">#${issue.displayId} - ${issue.title
-        }</h6>
-                            </div>
-                            <div class="d-flex" style="height: 20px; align-items: center;">
-                                <div style="border-radius: 5px; width: 5px; height: 20px; background-color: ${statusDisplay[issue.status].color
-        }"></div>
-                                <small class="ms-1 issue-status-toggle" data-issue-id="${issue.id}" data-status="${statusDisplay[issue.status].title}" data-type="${issue.issueTypeId || issue.issueSubtypeId || ''}">${statusDisplay[issue.status].title
-        } &middot;</small>
-                                <a id="deviation-${issue.id
-        }" target="_blank" href="${hemyLinkAttribute.value
-        }" title="Go to record"
-                                    style="color: #495057;" class="ms-2">
-                                    <svg class="w-[18px] h-[18px] text-gray-800 dark:text-white" aria-hidden="true"
-                                        xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
-                                        viewBox="0 0 24 24">
-                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M3 15v3c0 .5523.44772 1 1 1h9.5M3 15v-4m0 4h9m-9-4V6c0-.55228.44772-1 1-1h16c.5523 0 1 .44772 1 1v5H3Zm5 0v8m4-8v8m7.0999-1.0999L21 16m0 0-1.9001-1.9001M21 16h-5" />
-                                    </svg>
-                                </a>
-                            </div>
-                        </div>`;
-    } else {
-      innerSubIcon = ` <div class="d-block justify-content-between">
-                            <div class="d-flex">
-                               <h6 class="mb-1 fw-bold">#${issue.displayId} - ${issue.title
-        }</h6>
-                            </div>
-                            <div class="d-flex" style="height: 20px; align-items: center;">
-                                <div style="border-radius: 5px; width: 5px; height: 20px; background-color: ${statusDisplay[issue.status].color
-        }"></div>
-                                <small class="ms-1">${statusDisplay[issue.status].title
-        } &middot;</small>
-                            </div>
-                        </div>`;
-    }
-    divSubIcon.innerHTML = innerSubIcon;
-    divSubIcon.className = "sub-icon issue";
-
-    divSubIcon.onclick = (event) => {
-      pushpinExt.selectOne(issue.id);
-      $.each(issues, (index, issue_subicon) => {
-        const subicon = document.getElementById(
-          `div-issue-subicon-${issue_subicon.id}`
+      issues =
+        await window.getAllIssues(
+          containerId
         );
-        if (
-          divSubIcon.getAttribute("id") ===
-          `div-issue-subicon-${issue_subicon.id}`
-        ) {
-          subicon.classList.add("active");
-        } else {
-          subicon.classList.remove("active");
-        }
-      });
-      //console.log(divSubIcon.getAttribute("id"));
-    };
 
-    divIssueSidebar.appendChild(divSubIcon);
-  });
+    } else {
+
+      console.error(
+        "getAllIssues not available"
+      );
+    }
+
+  } catch (error) {
+
+    console.error(
+      "Error getting issues:",
+      error
+    );
+  }
+
+  // ---------------------------------------------------------
+  // OLD LIST ONLY SHOWS OPEN ISSUES
+  // ---------------------------------------------------------
+
+  issues =
+    Array.isArray(issues)
+      ? issues.filter(
+          (issue) =>
+            issue.status === "open"
+        )
+      : [];
+
+  console.log(
+    "Issues:",
+    issues
+  );
+
+  // ---------------------------------------------------------
+  // LOOP ISSUES
+  // ---------------------------------------------------------
+
+  $.each(
+    issues,
+    (index, issue) => {
+
+      // ! BS19
+      // #region: bandaid solution bs19
+
+      /*
+       * IMPORTANT:
+       *
+       * The old code used:
+       *
+       * issue.issueTypeId != X ||
+       * issue.issueTypeId != X
+       *
+       * That condition is incorrect.
+       *
+       * If you only have ONE allowed issue type,
+       * use !== with &&.
+       *
+       * The two IDs in your original code were identical,
+       * so this currently has no useful OR condition.
+       */
+
+      if (
+        containerId ===
+          "1c8224f1-b860-4a2b-821b-d393c94b190d"
+        &&
+        issue.issueTypeId !==
+          "318b5e55-0eef-4d61-9059-927fd4d40134"
+      ) {
+        return;
+      }
+
+      // #endregion
+
+      const divSubIcon =
+        document.createElement("div");
+
+      // -----------------------------------------------------
+      // CUSTOM ATTRIBUTES
+      // -----------------------------------------------------
+
+      const customAttributes =
+        Array.isArray(
+          issue.customAttributes
+        )
+          ? issue.customAttributes
+          : [];
+
+      const findHemyXLink =
+        customAttributes.filter(
+          (attributes) =>
+            attributes.title ===
+            "Hemy X Link"
+        );
+
+      const hemyLinkAttribute =
+        findHemyXLink[0];
+
+      // -----------------------------------------------------
+      // STATUS DISPLAY
+      // -----------------------------------------------------
+
+      const statusDisplay = {
+
+        open: {
+          title: "Open",
+          color: "#f5bf42"
+        },
+
+        draft: {
+          title: "Draft",
+          color: "#000000"
+        },
+
+        pending: {
+          title: "Pending",
+          color: "#001ee0ff"
+        },
+
+        in_review: {
+          title: "In Review",
+          color: "#8300e0ff"
+        },
+
+        closed: {
+          title: "Closed",
+          color: "#39393bff"
+        },
+
+        completed: {
+          title: "Closed",
+          color: "#39393bff"
+        }
+
+      };
+
+      const currentStatus =
+        statusDisplay[issue.status] || {
+          title:
+            issue.status || "Unknown",
+
+          color:
+            "#6c757d"
+        };
+
+      // -----------------------------------------------------
+      // SIDEBAR ITEM ID
+      // -----------------------------------------------------
+
+      divSubIcon.setAttribute(
+        "id",
+        `div-issue-subicon-${issue.id}`
+      );
+
+      let innerSubIcon = "";
+
+      // -----------------------------------------------------
+      // HEMY LINK
+      // -----------------------------------------------------
+
+      if (
+        hemyLinkAttribute &&
+        hemyLinkAttribute.value
+      ) {
+
+        innerSubIcon = `
+          <div class="d-block justify-content-between">
+
+            <div class="d-flex">
+              <h6 class="mb-1 fw-bold">
+                #${issue.displayId} - ${issue.title}
+              </h6>
+            </div>
+
+            <div
+              class="d-flex"
+              style="
+                height: 20px;
+                align-items: center;
+              "
+            >
+
+              <div
+                style="
+                  border-radius: 5px;
+                  width: 5px;
+                  height: 20px;
+                  background-color:
+                    ${currentStatus.color};
+                "
+              ></div>
+
+              <small
+                class="ms-1 issue-status-toggle"
+                data-issue-id="${issue.id}"
+                data-status="${currentStatus.title}"
+                data-type="${
+                  issue.issueTypeId ||
+                  issue.issueSubtypeId ||
+                  ""
+                }"
+              >
+                ${currentStatus.title}
+                &middot;
+              </small>
+
+              <a
+                id="deviation-${issue.id}"
+                target="_blank"
+                href="${hemyLinkAttribute.value}"
+                title="Go to record"
+                style="color: #495057;"
+                class="ms-2"
+              >
+
+                <svg
+                  class="w-[18px] h-[18px]
+                    text-gray-800
+                    dark:text-white"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+
+                  <path
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="
+                      M3 15v3c0 .5523
+                      .44772 1 1 1h9.5
+                      M3 15v-4m0 4h9m-9-4V6
+                      c0-.55228.44772-1 1-1h16
+                      c.5523 0 1 .44772 1 1v5H3Zm5
+                      0v8m4-8v8m7.0999-1.0999L21 16m0 0
+                      -1.9001-1.9001M21 16h-5
+                    "
+                  />
+
+                </svg>
+
+              </a>
+
+            </div>
+
+          </div>
+        `;
+
+      } else {
+
+        // ---------------------------------------------------
+        // NO HEMY LINK
+        // ---------------------------------------------------
+
+        innerSubIcon = `
+          <div class="d-block justify-content-between">
+
+            <div class="d-flex">
+              <h6 class="mb-1 fw-bold">
+                #${issue.displayId} - ${issue.title}
+              </h6>
+            </div>
+
+            <div
+              class="d-flex"
+              style="
+                height: 20px;
+                align-items: center;
+              "
+            >
+
+              <div
+                style="
+                  border-radius: 5px;
+                  width: 5px;
+                  height: 20px;
+                  background-color:
+                    ${currentStatus.color};
+                "
+              ></div>
+
+              <small class="ms-1">
+                ${currentStatus.title}
+                &middot;
+              </small>
+
+            </div>
+
+          </div>
+        `;
+      }
+
+      // -----------------------------------------------------
+      // INSERT HTML
+      // -----------------------------------------------------
+
+      divSubIcon.innerHTML =
+        innerSubIcon;
+
+      divSubIcon.className =
+        "sub-icon issue";
+
+      // -----------------------------------------------------
+      // CLICK
+      // -----------------------------------------------------
+
+      divSubIcon.onclick = () => {
+
+        pushpinExt.selectOne(
+          issue.id
+        );
+
+        $.each(
+          issues,
+          (index, issue_subicon) => {
+
+            const subicon =
+              document.getElementById(
+                `div-issue-subicon-${issue_subicon.id}`
+              );
+
+            if (!subicon) {
+              return;
+            }
+
+            if (
+              divSubIcon.getAttribute("id") ===
+              `div-issue-subicon-${issue_subicon.id}`
+            ) {
+
+              subicon.classList.add(
+                "active"
+              );
+
+            } else {
+
+              subicon.classList.remove(
+                "active"
+              );
+
+            }
+
+          }
+        );
+      };
+
+      // -----------------------------------------------------
+      // ADD TO SIDEBAR
+      // -----------------------------------------------------
+
+      divIssueSidebar.appendChild(
+        divSubIcon
+      );
+    }
+  );
 }
 
-async function hideToolbar(viewer, toolBars = []) {
+// #endregion
 
-  toolBars.forEach((toolbar) => {
-    const toolBarType = toolbar.type;
-    const toolBarSet = viewer.toolbar.getControl(toolBarType);
-    toolbar.toolbarIds.forEach((tbids) => {
-      toolBarSet.removeControl(tbids)
-    })
-  })
+
+// =========================================================
+// HIDE TOOLBAR
+// =========================================================
+
+async function hideToolbar(
+  viewer,
+  toolBars = []
+) {
+
+  toolBars.forEach(
+    (toolbar) => {
+
+      const toolBarType =
+        toolbar.type;
+
+      const toolBarSet =
+        viewer.toolbar.getControl(
+          toolBarType
+        );
+
+      if (!toolBarSet) {
+        return;
+      }
+
+      toolbar.toolbarIds.forEach(
+        (tbids) => {
+
+          toolBarSet.removeControl(
+            tbids
+          );
+
+        }
+      );
+    }
+  );
 }
 
 

@@ -106,33 +106,31 @@ router.get(
       const { containerId } = req.params;
       const filter = req.query;
       console.log('Filter Query', filter);
-      let allIssues = [];
-      let offset = 0;
-      const limit = 100;
-      let hasMore = true;
+      const allIssues = await issues_services.getIssues(
+        containerId,
+        [],
+        0,
+        100,
+        {}
+      );
+      console.log('Unfiltered issue count:', allIssues.length);
+      console.log('Unfiltered issue samples:', allIssues.slice(0, 5).map((issue) => ({
+        id: issue.id,
+        status: issue.status,
+        issueSubtypeId: issue.issueSubtypeId,
+        issueSubtype: issue.issueSubtype,
+        subtype: issue.subtype
+      })));
 
-      while (hasMore) {
-        const batch = await issues_services.getIssues(
-          containerId,
-          [],
-          offset,
-          limit,
-          filter
-        );
-
-        allIssues = allIssues.concat(batch);
-
-        if (batch.length < limit) {
-          hasMore = false;
-        } else {
-          offset += limit;
-        }
-      }
-
+      // Return the complete collection. The viewer applies the selected
+      // status and subtype filters after it receives the issue data.
       res.json(allIssues);
     } catch (err) {
       console.error(`/api/allIssues/:containerId`, err);
-      res.status(500).end();
+      res.status(502).json({
+        error: 'Unable to load issues from Autodesk',
+        details: err.message
+      });
     }
   }
 );
